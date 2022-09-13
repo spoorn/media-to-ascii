@@ -1,5 +1,5 @@
-# img-to-ascii
-Image to ASCII Art, in Rust
+# media-to-ascii
+Images and Videos to ASCII Art, in Rust
 
-# For video-to-ascii
+# For Videos
 Make sure you have OpenCV installed if running via `cargo run` or from the source: https://github.com/twistedfall/opencv-rust

@@ -252,7 +252,7 @@ fn main() {
     // }
     
     let video_config = VideoConfigBuilder::default()
-        .video_path("".to_string())
+        .video_path("/mnt/c/Users/Mikur/Desktop/download.mp4".to_string())
         .scale_down(4.0)
         .invert(true)
         .build()
