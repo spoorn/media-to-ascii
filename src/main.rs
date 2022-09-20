@@ -290,7 +290,11 @@ fn write_to_ascii_video(config: &VideoConfig, ascii: &Vec<Vec<&str>>, video_writ
 fn process_video(config: VideoConfig) {
     let video_path = config.video_path.as_str();
     let output_video_path = config.output_video_path.as_ref();
-    check_file_exists(output_video_path.unwrap(), config.overwrite);
+    let output_video_file: bool = output_video_path.is_some();
+
+    if output_video_file {
+        check_file_exists(output_video_path.unwrap(), config.overwrite);
+    }
 
     let mut capture = videoio::VideoCapture::from_file(video_path, CAP_ANY)
         .expect(format!("Could not open video file at {video_path}").as_str());
@@ -307,7 +311,10 @@ fn process_video(config: VideoConfig) {
     // Video output
     let mut video_writer: VideoWriter = VideoWriter::default().unwrap();
     let mut output_frame_size: Size = Size::default();
-    let output_video_file: bool = output_video_path.is_some();
+
+    if output_video_file {
+        println!("Re-encoding video from {} to ascii video at {}", video_path, output_video_path.unwrap());
+    }
     
     let progressbar = ProgressBar::new(num_frames);
 
@@ -365,12 +372,16 @@ fn process_video(config: VideoConfig) {
     // Writes the video explicitly just for clarity
     video_writer.release().unwrap();
     progressbar.finish();
+
+    if output_video_file {
+        println!("Wrote output video file to {}", output_video_path.unwrap());
+    }
 }
 
 fn main() {
     // Note: Rust plugin can expand procedural macros using https://github.com/intellij-rust/intellij-rust/issues/6908
     // let config = ImageConfigBuilder::default()
-    //     .image_path("/mnt/c/Users/Mikur/Downloads/giggles-closeup_orig.jpg".to_string())
+    //     .image_path("".to_string())
     //     .scale_down(4.0)
     //     .invert(true)
     //     .build()
@@ -391,8 +402,8 @@ fn main() {
     // }
 
     let video_config = VideoConfigBuilder::default()
-        .video_path("/mnt/c/Users/Mikur/Desktop/download.mp4".to_string())
-        .scale_down(2.0)
+        .video_path("".to_string())
+        .scale_down(8.0)
         .invert(true)
         .output_video_path(Some("test.mp4".to_string()))
         .overwrite(true)
