@@ -88,6 +88,7 @@ struct VideoConfig {
     output_video_path: Option<String>,
     overwrite: bool,
     use_max_fps_for_output_video: bool,
+    rotate: i32
 }
 
 impl Default for VideoConfig {
@@ -102,6 +103,7 @@ impl Default for VideoConfig {
             output_video_path: Some("output.mp4".to_string()),
             overwrite: false,
             use_max_fps_for_output_video: false,
+            rotate: -1
         }
     }
 }
@@ -183,6 +185,10 @@ fn generate_ascii_image(ascii: &Vec<Vec<&str>>, size: &Size, invert: bool) -> Im
     //     );
     // });
 
+    // let mut flat_ascii = vec![];
+    // ascii.iter().for_each(|row| {
+    //     flat_ascii.extend(row);
+    // });
     ascii.iter().enumerate().for_each(|(row, row_data)| {
         let text_row = row_data.join("");
         draw_text_mut(
@@ -342,10 +348,11 @@ fn process_video(config: VideoConfig) {
     // Video output
     let mut video_writer: VideoWriter = VideoWriter::default().unwrap();
     let mut output_frame_size: Size = Size::default();
+    let should_rotate = config.rotate > -1 && config.rotate < 3;
 
     if output_video_file {
         println!(
-            "Re-encoding video from {} to ascii video at {}",
+            "Encoding video from {} to ascii video at {}",
             video_path,
             output_video_path.unwrap()
         );
@@ -362,6 +369,11 @@ fn process_video(config: VideoConfig) {
         let read = capture.read(&mut frame).expect("Could not read frame of video");
         if !read {
             continue;
+        }
+        
+        // Rotate
+        if should_rotate {
+            opencv::core::rotate(&frame.clone(), &mut frame, config.rotate).unwrap();
         }
 
         let ascii = convert_opencv_video(&frame, &config);
@@ -441,10 +453,11 @@ fn main() {
 
     let video_config = VideoConfigBuilder::default()
         .video_path("".to_string())
-        .scale_down(1.0)
+        .scale_down(2.0)
         .invert(true)
         .output_video_path(Some("test.mp4".to_string()))
         .overwrite(true)
+        .rotate(0)
         .build()
         .unwrap();
 
