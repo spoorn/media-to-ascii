@@ -1,11 +1,12 @@
 use derive_builder::Builder;
 use image::{GenericImageView, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
+use indicatif::ProgressBar;
 use once_cell::sync::Lazy;
-use opencv::core::{Mat, MatTraitConst, Scalar, Size, Size_, CV_8UC3};
+use opencv::core::{Mat, MatTraitConst, Scalar, Size, Size_, Vec3b, CV_8UC3};
 use opencv::prelude::*;
 use opencv::videoio;
-use opencv::videoio::{VideoCaptureTrait, VideoWriter, CAP_ANY, VIDEOWRITER_PROP_QUALITY};
+use opencv::videoio::{VideoCaptureTrait, VideoWriter, CAP_ANY};
 use rusttype::{Font, Scale};
 use std::fs::OpenOptions;
 use std::io;
@@ -13,7 +14,6 @@ use std::io::Write;
 use std::path::Path;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
-use indicatif::ProgressBar;
 
 static RGB_TO_GREYSCALE: (f32, f32, f32) = (0.299, 0.587, 0.114);
 // Font height of ascii when producing videos, approximately the number of pixels
@@ -106,6 +106,7 @@ impl Default for VideoConfig {
     }
 }
 
+#[inline]
 fn ascii_to_str(ascii: &Vec<Vec<&str>>) -> String {
     let mut buffer = String::default();
     for y in 0..ascii.len() {
@@ -157,14 +158,33 @@ fn write_to_file<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &Vec<Vec
     }
 }
 
-#[inline(always)]
+#[inline]
 fn generate_ascii_image(ascii: &Vec<Vec<&str>>, size: &Size, invert: bool) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
     let background_color = if invert { Rgb([40u8, 42u8, 54u8]) } else { Rgb([255u8, 255u8, 255u8]) };
     let text_color = if invert { Rgb([255u8, 255u8, 255u8]) } else { Rgb([0u8, 0u8, 0u8]) };
     let mut frame = RgbImage::from_pixel(size.width as u32, size.height as u32, background_color);
 
-    for row in 0..ascii.len() {
-        let text_row = ascii[row].join("");
+    // parallel implementation
+    // let mut ascii_strings: Vec<String> = vec![];
+    //
+    // ascii.par_iter().map(|row| {
+    //     row.join("")
+    // }).collect_into_vec(&mut ascii_strings);
+    //
+    // ascii_strings.iter().enumerate().for_each(|(row, text_row)| {
+    //     draw_text_mut(
+    //         &mut frame,
+    //         text_color,
+    //         0,
+    //         (row as f32 * FONT_HEIGHT) as i32,
+    //         FONT_SCALE,
+    //         &CASCADIA_FONT,
+    //         text_row.as_str(),
+    //     );
+    // });
+
+    ascii.iter().enumerate().for_each(|(row, row_data)| {
+        let text_row = row_data.join("");
         draw_text_mut(
             &mut frame,
             text_color,
@@ -174,7 +194,7 @@ fn generate_ascii_image(ascii: &Vec<Vec<&str>>, size: &Size, invert: bool) -> Im
             &CASCADIA_FONT,
             text_row.as_str(),
         );
-    }
+    });
 
     frame
 }
@@ -230,6 +250,7 @@ fn process_image(config: &ImageConfig) -> Vec<Vec<&'static str>> {
 /// Converts an opencv frame Matrix into ascii representation 2-d Vector
 ///
 /// References https://github.com/luketio/asciiframe/blob/main/src/converter.rs#L15.
+#[inline]
 fn convert_opencv_video(frame: &Mat, config: &VideoConfig) -> Vec<Vec<&'static str>> {
     let scale_down = config.scale_down;
     let height_sample_scale = config.height_sample_scale;
@@ -246,8 +267,8 @@ fn convert_opencv_video(frame: &Mat, config: &VideoConfig) -> Vec<Vec<&'static s
 
     for y in 0..res.len() {
         for x in 0..scaled_width {
-            let pix: opencv::core::Vec3b = *frame
-                .at_2d::<opencv::core::Vec3b>(
+            let pix: Vec3b = *frame
+                .at_2d::<Vec3b>(
                     (y as f32 * scale_down * height_sample_scale) as i32,
                     (x as f32 * scale_down) as i32,
                 )
@@ -263,6 +284,7 @@ fn convert_opencv_video(frame: &Mat, config: &VideoConfig) -> Vec<Vec<&'static s
     res
 }
 
+#[inline]
 fn write_to_ascii_video(config: &VideoConfig, ascii: &Vec<Vec<&str>>, video_writer: &mut VideoWriter, size: &Size) {
     let frame = generate_ascii_image(ascii, size, config.invert);
 
@@ -270,6 +292,7 @@ fn write_to_ascii_video(config: &VideoConfig, ascii: &Vec<Vec<&str>>, video_writ
     // opencv uses BGR format
     let bgr_background_color =
         if config.invert { Scalar::from((54.0, 42.0, 40.0)) } else { Scalar::from((255.0, 255.0, 255.0)) };
+
     let mut opencv_frame = Mat::new_rows_cols_with_default(
         frame.height() as i32,
         frame.width() as i32,
@@ -278,16 +301,14 @@ fn write_to_ascii_video(config: &VideoConfig, ascii: &Vec<Vec<&str>>, video_writ
     )
     .unwrap();
 
-    let (width, height) = frame.dimensions();
+    // Writing per row is much faster than reading and writing each pixel
+    frame.enumerate_rows().for_each(|(row, x)| {
+        let row_pixels: Vec<Vec3b> = x.map(|(x, y, pix)| Vec3b::from([pix[2], pix[1], pix[0]])).collect();
 
-    for y in 0..height {
-        for x in 0..width {
-            let pix = frame.get_pixel(x, y);
-            // RGB to BGR
-            *opencv_frame.at_2d_mut::<opencv::core::Vec3b>(y as i32, x as i32).unwrap() =
-                opencv::core::Vec3b::from([pix[2], pix[1], pix[0]]);
-        }
-    }
+        opencv_frame.at_row_mut::<Vec3b>(row as i32).unwrap().iter_mut().enumerate().for_each(|(i, pix)| {
+            *pix = row_pixels[i];
+        })
+    });
 
     video_writer.write(&opencv_frame).expect("Could not write frame to video");
 }
@@ -298,7 +319,7 @@ fn write_to_ascii_video(config: &VideoConfig, ascii: &Vec<Vec<&str>>, video_writ
 fn process_video(config: VideoConfig) {
     let video_path = config.video_path.as_str();
     check_valid_file(video_path);
-    
+
     let output_video_path = config.output_video_path.as_ref();
     let output_video_file: bool = output_video_path.is_some();
 
@@ -323,9 +344,13 @@ fn process_video(config: VideoConfig) {
     let mut output_frame_size: Size = Size::default();
 
     if output_video_file {
-        println!("Re-encoding video from {} to ascii video at {}", video_path, output_video_path.unwrap());
+        println!(
+            "Re-encoding video from {} to ascii video at {}",
+            video_path,
+            output_video_path.unwrap()
+        );
     }
-    
+
     let progressbar = ProgressBar::new(num_frames);
 
     for i in 0..num_frames {
@@ -347,10 +372,11 @@ fn process_video(config: VideoConfig) {
             if i == 0 {
                 // Initialize VideoWriter for real
                 output_frame_size = get_size_from_ascii(&ascii);
+                let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
                 video_writer = VideoWriter::new(
                     output_video_path.unwrap().as_str(),
                     VideoWriter::fourcc('m', 'p', '4', 'v').unwrap(),
-                    orig_fps,
+                    video_fps,
                     output_frame_size,
                     true,
                 )
@@ -384,7 +410,7 @@ fn process_video(config: VideoConfig) {
     progressbar.finish();
 
     if output_video_file {
-        println!("Wrote output video file to {}", output_video_path.unwrap());
+        println!("Finished writing output video file to {}", output_video_path.unwrap());
     }
 }
 
@@ -392,8 +418,10 @@ fn main() {
     // Note: Rust plugin can expand procedural macros using https://github.com/intellij-rust/intellij-rust/issues/6908
     // let config = ImageConfigBuilder::default()
     //     .image_path("".to_string())
-    //     .scale_down(4.0)
+    //     .scale_down(1.0)
     //     .invert(true)
+    //     .output_image_path(Some("test.png".to_string()))
+    //     .overwrite(true)
     //     .build()
     //     .unwrap();
     //
@@ -413,7 +441,7 @@ fn main() {
 
     let video_config = VideoConfigBuilder::default()
         .video_path("".to_string())
-        .scale_down(4.0)
+        .scale_down(1.0)
         .invert(true)
         .output_video_path(Some("test.mp4".to_string()))
         .overwrite(true)
