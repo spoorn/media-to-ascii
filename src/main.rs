@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use opencv::core::{Mat, MatTraitConst, Scalar, Size, Size_, CV_8UC3};
 use opencv::prelude::*;
 use opencv::videoio;
-use opencv::videoio::{VideoCaptureTrait, VideoWriter, CAP_ANY};
+use opencv::videoio::{VideoCaptureTrait, VideoWriter, CAP_ANY, VIDEOWRITER_PROP_QUALITY};
 use rusttype::{Font, Scale};
 use std::fs::OpenOptions;
 use std::io;
@@ -129,6 +129,13 @@ fn check_file_exists<S: AsRef<str>>(file: S, overwrite: bool) {
     }
 }
 
+fn check_valid_file<S: AsRef<str>>(path: S) {
+    let path = path.as_ref();
+    if !Path::new(path).is_file() {
+        panic!("Path at {} is not a valid file!", path)
+    }
+}
+
 fn write_to_file<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &Vec<Vec<&str>>) {
     let output_file = output_file.as_ref();
     check_file_exists(output_file, overwrite);
@@ -187,6 +194,7 @@ fn write_to_image<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &Vec<Ve
 
 fn process_image(config: &ImageConfig) -> Vec<Vec<&'static str>> {
     let img_path = config.image_path.as_str();
+    check_valid_file(img_path);
     let scale_down = config.scale_down;
     let height_sample_scale = config.height_sample_scale;
 
@@ -289,6 +297,8 @@ fn write_to_ascii_video(config: &VideoConfig, ascii: &Vec<Vec<&str>>, video_writ
 /// References https://github.com/luketio/asciiframe/blob/7f23d8843278ad9cd4b53ff7110005aceeec1fcb/src/renderer.rs#L69.
 fn process_video(config: VideoConfig) {
     let video_path = config.video_path.as_str();
+    check_valid_file(video_path);
+    
     let output_video_path = config.output_video_path.as_ref();
     let output_video_file: bool = output_video_path.is_some();
 
@@ -403,7 +413,7 @@ fn main() {
 
     let video_config = VideoConfigBuilder::default()
         .video_path("".to_string())
-        .scale_down(8.0)
+        .scale_down(4.0)
         .invert(true)
         .output_video_path(Some("test.mp4".to_string()))
         .overwrite(true)
