@@ -13,6 +13,7 @@ use std::io::Write;
 use std::path::Path;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
+use indicatif::ProgressBar;
 
 static RGB_TO_GREYSCALE: (f32, f32, f32) = (0.299, 0.587, 0.114);
 // Font height of ascii when producing videos, approximately the number of pixels
@@ -306,7 +307,9 @@ fn process_video(config: VideoConfig) {
     // Video output
     let mut video_writer: VideoWriter = VideoWriter::default().unwrap();
     let mut output_frame_size: Size = Size::default();
-    println!("Num Frames: {}", num_frames);
+    let output_video_file: bool = output_video_path.is_some();
+    
+    let progressbar = ProgressBar::new(num_frames);
 
     for i in 0..num_frames {
         let start = SystemTime::now();
@@ -321,7 +324,7 @@ fn process_video(config: VideoConfig) {
 
         let ascii = convert_opencv_video(&frame, &config);
 
-        if output_video_path.is_some() {
+        if output_video_file {
             // Write to video file
 
             if i == 0 {
@@ -337,11 +340,11 @@ fn process_video(config: VideoConfig) {
                 .unwrap();
             }
 
+            progressbar.inc(1);
             if config.use_max_fps_for_output_video && i % frame_cut == 0 {
                 continue;
             }
 
-            println!("Writing frame {}", i);
             write_to_ascii_video(&config, &ascii, &mut video_writer, &output_frame_size);
         } else {
             // Write to terminal
@@ -361,12 +364,13 @@ fn process_video(config: VideoConfig) {
 
     // Writes the video explicitly just for clarity
     video_writer.release().unwrap();
+    progressbar.finish();
 }
 
 fn main() {
     // Note: Rust plugin can expand procedural macros using https://github.com/intellij-rust/intellij-rust/issues/6908
     // let config = ImageConfigBuilder::default()
-    //     .image_path("".to_string())
+    //     .image_path("/mnt/c/Users/Mikur/Downloads/giggles-closeup_orig.jpg".to_string())
     //     .scale_down(4.0)
     //     .invert(true)
     //     .build()
@@ -387,9 +391,11 @@ fn main() {
     // }
 
     let video_config = VideoConfigBuilder::default()
-        .video_path("".to_string())
+        .video_path("/mnt/c/Users/Mikur/Desktop/download.mp4".to_string())
         .scale_down(2.0)
         .invert(true)
+        .output_video_path(Some("test.mp4".to_string()))
+        .overwrite(true)
         .build()
         .unwrap();
 
