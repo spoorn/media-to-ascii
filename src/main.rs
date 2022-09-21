@@ -1,3 +1,4 @@
+use clap::{AppSettings, ArgGroup, Parser};
 use derive_builder::Builder;
 use image::{GenericImageView, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
@@ -14,7 +15,6 @@ use std::io::Write;
 use std::path::Path;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
-use clap::{Parser, AppSettings, ArgGroup};
 
 static RGB_TO_GREYSCALE: (f32, f32, f32) = (0.299, 0.587, 0.114);
 // Font height of ascii when producing videos, approximately the number of pixels
@@ -84,7 +84,7 @@ struct Cli {
     #[clap(long, action)]
     overwrite: bool,
     /// Max FPS for video outputs.  If outputting to video file, `use_max_fps_for_output_video`
-    /// must be set to `true` to honor this setting.  Ascii videos in the terminal default to 
+    /// must be set to `true` to honor this setting.  Ascii videos in the terminal default to
     /// max_fps=10 for smoother visuals.
     #[clap(long, value_parser)]
     max_fps: Option<u64>,
@@ -142,7 +142,7 @@ struct VideoConfig {
     output_video_path: Option<String>,
     overwrite: bool,
     use_max_fps_for_output_video: bool,
-    rotate: i32
+    rotate: i32,
 }
 
 impl Default for VideoConfig {
@@ -157,7 +157,7 @@ impl Default for VideoConfig {
             output_video_path: None,
             overwrite: false,
             use_max_fps_for_output_video: false,
-            rotate: -1
+            rotate: -1,
         }
     }
 }
@@ -311,21 +311,27 @@ fn convert_image_to_ascii(config: &ImageConfig) -> Vec<Vec<&'static str>> {
             }
         }
     }
-    
+
     res
 }
 
 fn process_image(config: ImageConfig) {
     let ascii = convert_image_to_ascii(&config);
-    
+
     if let Some(file) = config.output_file_path.as_ref() {
         write_to_file(file, config.overwrite.clone(), &ascii);
     }
-    
+
     if let Some(file) = config.output_image_path.as_ref() {
-        write_to_image(file, config.overwrite.clone(), &ascii, &get_size_from_ascii(&ascii), config.invert.clone());
+        write_to_image(
+            file,
+            config.overwrite.clone(),
+            &ascii,
+            &get_size_from_ascii(&ascii),
+            config.invert.clone(),
+        );
     }
-    
+
     if config.output_file_path.is_none() && config.output_image_path.is_none() {
         print_ascii(&ascii);
     }
@@ -448,7 +454,7 @@ fn process_video(config: VideoConfig) {
         if !read {
             continue;
         }
-        
+
         // Rotate
         if should_rotate {
             opencv::core::rotate(&frame.clone(), &mut frame, config.rotate).unwrap();
@@ -507,15 +513,16 @@ fn process_video(config: VideoConfig) {
 fn main() {
     let cli = Cli::parse();
     // Note: Rust plugin can expand procedural macros using https://github.com/intellij-rust/intellij-rust/issues/6908
-    
+
     if let Some(image_path) = cli.image_path {
         let mut config_builder = ImageConfigBuilder::default();
-        config_builder.image_path(image_path)
+        config_builder
+            .image_path(image_path)
             .scale_down(cli.scale_down)
             .height_sample_scale(cli.height_sample_scale)
             .invert(cli.invert)
             .overwrite(cli.overwrite);
-        
+
         if let Some(output_path) = cli.output_file_path {
             if cli.as_text {
                 config_builder.output_file_path(Some(output_path));
@@ -523,29 +530,30 @@ fn main() {
                 config_builder.output_image_path(Some(output_path));
             }
         }
-        
+
         let config = config_builder.build().unwrap();
         process_image(config);
     } else if let Some(video_path) = cli.video_path {
         let mut config_builder = VideoConfigBuilder::default();
-        config_builder.video_path(video_path)
+        config_builder
+            .video_path(video_path)
             .scale_down(cli.scale_down)
             .invert(cli.invert)
             .overwrite(cli.overwrite)
             .use_max_fps_for_output_video(cli.use_max_fps_for_output_video);
-        
+
         if let Some(max_fps) = cli.max_fps {
             config_builder.max_fps(max_fps);
         }
-        
+
         if let Some(output_path) = cli.output_file_path {
             config_builder.output_video_path(Some(output_path));
         }
-        
+
         if let Some(rotate) = cli.rotate {
             config_builder.rotate(rotate);
         }
-        
+
         let config = config_builder.build().unwrap();
         process_video(config);
     } else {
