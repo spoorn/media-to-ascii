@@ -106,7 +106,9 @@ jobs:
 
       # Install opencv
       - name: Install opencv
-        run: vcpkg install llvm opencv4[contrib,nonfree]
+        run: |
+          vcpkg update
+          vcpkg install llvm opencv4[contrib,nonfree]
         
       # Build
       - name: Build
