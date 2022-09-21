@@ -6,6 +6,9 @@ license = "MIT OR Apache-2.0"
 authors = ["spoorn"]
 homepage = "https://github.com/spoorn/media-to-ascii"
 repository = "https://github.com/spoorn/media-to-ascii"
+docmentation = "https://github.com/spoorn/media-to-ascii"
+keywords = ["ascii", "cli", "media-to-ascii", "mediatoascii", "media", "image", "video", "opencv"]
+categories = ["command-line-utilities", "computer-vision", "encoding", "multimedia", "multimedia::encoding"]
 readme = "README.md"
 description = """
 CLI and utilities for converting media files (images/videos) to ascii outputs (output media file or print to console).  
