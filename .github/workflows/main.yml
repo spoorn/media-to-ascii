@@ -31,7 +31,7 @@ jobs:
 
       # Install opencv
       - name: Install opencv
-        run: apt install libopencv-dev clang libclang-dev
+        run: sudo apt install libopencv-dev clang libclang-dev
         
       # Build
       - name: Build
