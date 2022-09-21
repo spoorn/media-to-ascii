@@ -37,6 +37,18 @@ jobs:
       - name: Build
         run: cargo build --release
         
+      # Ready artifacts for upload
+      - name: Prepare Artifacts
+        run: mv target/release/mediatoascii target/release/mediatoascii-x86_64-unknown-linux-gnu
+        
+      # Upload artifact
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: mediatoascii-x86_64-unknown-linux-gnu
+          path: target/release/mediatoascii-x86_64-unknown-linux-gnu
+          retention-days: 1
+        
   macos-build:
     # The type of runner that the job will run on
     runs-on: 	macos-12
@@ -58,6 +70,18 @@ jobs:
       - name: Build
         run: cargo build --release
         
+      # Ready artifacts for upload
+      - name: Prepare Artifacts
+        run: mv target/release/mediatoascii target/release/mediatoascii-x86_64-apple-darwin
+        
+      # Upload artifact
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: mediatoascii-x86_64-apple-darwin
+          path: target/release/mediatoascii-x86_64-apple-darwin
+          retention-days: 1
+        
   windows-build:
     # The type of runner that the job will run on
     runs-on: windows-latest
@@ -66,6 +90,10 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
+      
+      # Install rust
+      - name: Install rust
+        run: curl https://sh.rustup.rs -sSf | sh -s -- -y
       
       # Install vcpkg
       - name: run-vcpkg
@@ -83,3 +111,4 @@ jobs:
       # Build
       - name: Build
         run: cargo build --release
+
