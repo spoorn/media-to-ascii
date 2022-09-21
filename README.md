@@ -8,8 +8,15 @@ Only output format for videos is `.mp4` at the moment
 
 mediatoascii is capable of extremely high quality ascii images/videos (click on the images below to see the full resolution), or the usual fun scaled-down ones!
 
-(From https://www.tiktok.com/@swishanime_/video/7143035431066602794)
-![](https://i.imgur.com/Lug9Tha.gif)
+### Videos
+
+![](https://github.com/spoorn/media-to-ascii/blob/main/examples/fairytail.gif?raw=true)
+
+(From https://www.tiktok.com/@swishanime_/video/7143035431066602794)  
+
+Or for a more high quality version: https://i.imgur.com/vRJMpA1.mp4
+
+### Images
 
 ![happy_image](https://i.imgur.com/P9BBPAA.jpg)
 
