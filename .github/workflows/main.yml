@@ -27,7 +27,7 @@ jobs:
       
       # Install rust
       - name: Install rust
-        run: curl https://sh.rustup.rs -sSf | sh
+        run: curl https://sh.rustup.rs -sSf | sh -y
 
       # Install opencv
       - name: Install opencv
