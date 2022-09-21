@@ -14,6 +14,7 @@ use std::io::Write;
 use std::path::Path;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
+use clap::{Parser, AppSettings, ArgGroup};
 
 static RGB_TO_GREYSCALE: (f32, f32, f32) = (0.299, 0.587, 0.114);
 // Font height of ascii when producing videos, approximately the number of pixels
@@ -40,7 +41,7 @@ static CASCADIA_FONT: Lazy<Font<'static>> = Lazy::new(|| {
 // Custom toned down greyscale ramp that seems to produce better images visually
 static GREYSCALE_RAMP: Lazy<Vec<&str>> = Lazy::new(|| {
     vec![
-        "@", "B", "&", "#", "G", "P", "5", "J", "Y", "7", "?", "~", "!", ":", "^", ".", " ",
+        " ", ".", "^", ":", "~", "?", "7", "Y", "J", "5", "P", "G", "#", "&", "B", "@",
     ]
 });
 
@@ -49,6 +50,59 @@ static REVERSE_GREYSCALE_RAMP: Lazy<Vec<&str>> = Lazy::new(|| {
     clone.reverse();
     clone
 });
+
+/// Converts media (images and videos) to ascii, and displays output either as an output media file
+/// or in the terminal.
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
+#[clap(group(
+    ArgGroup::new("input_path")
+        .required(true)
+        .multiple(false)
+        .args(&["image-path", "video-path"]),
+))]
+struct Cli {
+    /// Input Image file.  One of image_path, or video_path must be populated.
+    #[clap(long, value_parser)]
+    image_path: Option<String>,
+    /// Input Video file.  One of image_path, or video_path must be populated.
+    #[clap(long, value_parser)]
+    video_path: Option<String>,
+    /// Multiplier to scale down input dimensions by when converting to ASCII.  For large frames,
+    /// recommended to scale down more so output file size is more reasonable.
+    #[clap(long, default_value_t = 1.0, value_parser)]
+    scale_down: f32,
+    /// Rate at which we sample from the pixel rows of the frames.  This affects how stretched the
+    /// output ascii is in the vertical or y-axis.
+    #[clap(long, default_value_t = 2.4, value_parser)]
+    height_sample_scale: f32,
+    /// Invert ascii greyscale ramp (For light backgrounds.  Default OFF is for dark backgrounds.)
+    #[clap(short, long, action)]
+    invert: bool,
+    /// Overwrite any output file if it already exists
+    #[clap(long, action)]
+    overwrite: bool,
+    /// Max FPS for video outputs.  If outputting to video file, `use_max_fps_for_output_video`
+    /// must be set to `true` to honor this setting.  Ascii videos in the terminal default to 
+    /// max_fps=10 for smoother visuals.
+    #[clap(long, value_parser)]
+    max_fps: Option<u64>,
+    /// For images, if output_file_path is specified, will save the ascii text as-is to the output
+    /// rather than an image file.
+    #[clap(long, action)]
+    as_text: bool,
+    /// Output file path.  If omitted, output will be written to console.
+    /// Supports most image formats, and .mp4 video outputs.
+    #[clap(short, long, value_parser)]
+    output_file_path: Option<String>,
+    /// Use the max_fps setting for video file outputs.
+    #[clap(long, action)]
+    use_max_fps_for_output_video: bool,
+    /// Rotate the input (0 = 90 CLOCKWISE, 1 = 180, 2 = 90 COUNTER-CLOCKWISE)
+    #[clap(short, long, value_parser = clap::value_parser!(i32).range(0..3))]
+    rotate: Option<i32>,
+}
 
 #[derive(Builder, Debug)]
 #[builder(default)]
@@ -100,7 +154,7 @@ impl Default for VideoConfig {
             height_sample_scale: 2.4,
             invert: false,
             max_fps: 10,
-            output_video_path: Some("output.mp4".to_string()),
+            output_video_path: None,
             overwrite: false,
             use_max_fps_for_output_video: false,
             rotate: -1
@@ -128,7 +182,7 @@ fn print_ascii(ascii: &Vec<Vec<&str>>) {
 fn check_file_exists<S: AsRef<str>>(file: S, overwrite: bool) {
     let file = file.as_ref();
     if !overwrite && Path::new(file).exists() {
-        panic!("File at {} already exists", file);
+        panic!("File at {} already exists, and overwrite is set to false", file);
     }
 }
 
@@ -162,8 +216,8 @@ fn write_to_file<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &Vec<Vec
 
 #[inline]
 fn generate_ascii_image(ascii: &Vec<Vec<&str>>, size: &Size, invert: bool) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
-    let background_color = if invert { Rgb([40u8, 42u8, 54u8]) } else { Rgb([255u8, 255u8, 255u8]) };
-    let text_color = if invert { Rgb([255u8, 255u8, 255u8]) } else { Rgb([0u8, 0u8, 0u8]) };
+    let background_color = if invert { Rgb([255u8, 255u8, 255u8]) } else { Rgb([40u8, 42u8, 54u8]) };
+    let text_color = if invert { Rgb([0u8, 0u8, 0u8]) } else { Rgb([255u8, 255u8, 255u8]) };
     let mut frame = RgbImage::from_pixel(size.width as u32, size.height as u32, background_color);
 
     // parallel implementation
@@ -215,10 +269,18 @@ fn get_size_from_ascii(ascii: &Vec<Vec<&str>>) -> Size_<i32> {
 fn write_to_image<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &Vec<Vec<&str>>, size: &Size, invert: bool) {
     let output_file = output_file.as_ref();
     check_file_exists(output_file, overwrite);
-    generate_ascii_image(ascii, size, invert).save(output_file).unwrap();
+    match generate_ascii_image(ascii, size, invert).save(output_file) {
+        Ok(_) => {
+            println!("Successfully saved ascii image to {}", output_file);
+        }
+        Err(e) => {
+            eprintln!("Failed to save ascii image to {}: {}", output_file, e);
+        }
+    }
 }
 
-fn process_image(config: &ImageConfig) -> Vec<Vec<&'static str>> {
+#[inline]
+fn convert_image_to_ascii(config: &ImageConfig) -> Vec<Vec<&'static str>> {
     let img_path = config.image_path.as_str();
     check_valid_file(img_path);
     let scale_down = config.scale_down;
@@ -249,15 +311,31 @@ fn process_image(config: &ImageConfig) -> Vec<Vec<&'static str>> {
             }
         }
     }
-
+    
     res
+}
+
+fn process_image(config: ImageConfig) {
+    let ascii = convert_image_to_ascii(&config);
+    
+    if let Some(file) = config.output_file_path.as_ref() {
+        write_to_file(file, config.overwrite.clone(), &ascii);
+    }
+    
+    if let Some(file) = config.output_image_path.as_ref() {
+        write_to_image(file, config.overwrite.clone(), &ascii, &get_size_from_ascii(&ascii), config.invert.clone());
+    }
+    
+    if config.output_file_path.is_none() && config.output_image_path.is_none() {
+        print_ascii(&ascii);
+    }
 }
 
 /// Converts an opencv frame Matrix into ascii representation 2-d Vector
 ///
 /// References https://github.com/luketio/asciiframe/blob/main/src/converter.rs#L15.
 #[inline]
-fn convert_opencv_video(frame: &Mat, config: &VideoConfig) -> Vec<Vec<&'static str>> {
+fn convert_opencv_video_to_ascii(frame: &Mat, config: &VideoConfig) -> Vec<Vec<&'static str>> {
     let scale_down = config.scale_down;
     let height_sample_scale = config.height_sample_scale;
 
@@ -297,7 +375,7 @@ fn write_to_ascii_video(config: &VideoConfig, ascii: &Vec<Vec<&str>>, video_writ
     // Create opencv CV_8UC3 frame
     // opencv uses BGR format
     let bgr_background_color =
-        if config.invert { Scalar::from((54.0, 42.0, 40.0)) } else { Scalar::from((255.0, 255.0, 255.0)) };
+        if config.invert { Scalar::from((255.0, 255.0, 255.0)) } else { Scalar::from((54.0, 42.0, 40.0)) };
 
     let mut opencv_frame = Mat::new_rows_cols_with_default(
         frame.height() as i32,
@@ -309,7 +387,7 @@ fn write_to_ascii_video(config: &VideoConfig, ascii: &Vec<Vec<&str>>, video_writ
 
     // Writing per row is much faster than reading and writing each pixel
     frame.enumerate_rows().for_each(|(row, x)| {
-        let row_pixels: Vec<Vec3b> = x.map(|(x, y, pix)| Vec3b::from([pix[2], pix[1], pix[0]])).collect();
+        let row_pixels: Vec<Vec3b> = x.map(|(_, _, pix)| Vec3b::from([pix[2], pix[1], pix[0]])).collect();
 
         opencv_frame.at_row_mut::<Vec3b>(row as i32).unwrap().iter_mut().enumerate().for_each(|(i, pix)| {
             *pix = row_pixels[i];
@@ -376,7 +454,7 @@ fn process_video(config: VideoConfig) {
             opencv::core::rotate(&frame.clone(), &mut frame, config.rotate).unwrap();
         }
 
-        let ascii = convert_opencv_video(&frame, &config);
+        let ascii = convert_opencv_video_to_ascii(&frame, &config);
 
         if output_video_file {
             // Write to video file
@@ -427,39 +505,50 @@ fn process_video(config: VideoConfig) {
 }
 
 fn main() {
+    let cli = Cli::parse();
     // Note: Rust plugin can expand procedural macros using https://github.com/intellij-rust/intellij-rust/issues/6908
-    // let config = ImageConfigBuilder::default()
-    //     .image_path("".to_string())
-    //     .scale_down(1.0)
-    //     .invert(true)
-    //     .output_image_path(Some("test.png".to_string()))
-    //     .overwrite(true)
-    //     .build()
-    //     .unwrap();
-    //
-    // let ascii = process_image(&config);
-    //
-    // if let Some(file) = config.output_file_path.as_ref() {
-    //     write_to_file(file, config.overwrite.clone(), &ascii);
-    // }
-    //
-    // if let Some(file) = config.output_image_path.as_ref() {
-    //     write_to_image(file, config.overwrite.clone(), &ascii, &get_size_from_ascii(&ascii), config.invert.clone());
-    // }
-    //
-    // if config.output_file_path.is_none() && config.output_image_path.is_none() {
-    //     print_ascii(&ascii);
-    // }
-
-    let video_config = VideoConfigBuilder::default()
-        .video_path("".to_string())
-        .scale_down(2.0)
-        .invert(true)
-        .output_video_path(Some("test.mp4".to_string()))
-        .overwrite(true)
-        .rotate(0)
-        .build()
-        .unwrap();
-
-    process_video(video_config);
+    
+    if let Some(image_path) = cli.image_path {
+        let mut config_builder = ImageConfigBuilder::default();
+        config_builder.image_path(image_path)
+            .scale_down(cli.scale_down)
+            .height_sample_scale(cli.height_sample_scale)
+            .invert(cli.invert)
+            .overwrite(cli.overwrite);
+        
+        if let Some(output_path) = cli.output_file_path {
+            if cli.as_text {
+                config_builder.output_file_path(Some(output_path));
+            } else {
+                config_builder.output_image_path(Some(output_path));
+            }
+        }
+        
+        let config = config_builder.build().unwrap();
+        process_image(config);
+    } else if let Some(video_path) = cli.video_path {
+        let mut config_builder = VideoConfigBuilder::default();
+        config_builder.video_path(video_path)
+            .scale_down(cli.scale_down)
+            .invert(cli.invert)
+            .overwrite(cli.overwrite)
+            .use_max_fps_for_output_video(cli.use_max_fps_for_output_video);
+        
+        if let Some(max_fps) = cli.max_fps {
+            config_builder.max_fps(max_fps);
+        }
+        
+        if let Some(output_path) = cli.output_file_path {
+            config_builder.output_video_path(Some(output_path));
+        }
+        
+        if let Some(rotate) = cli.rotate {
+            config_builder.rotate(rotate);
+        }
+        
+        let config = config_builder.build().unwrap();
+        process_video(config);
+    } else {
+        panic!("Either image-path or video-path must be provided!");
+    }
 }

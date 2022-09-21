@@ -2,6 +2,15 @@
 name = "mediatoascii"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["spoorn"]
+homepage = "https://github.com/spoorn/media-to-ascii"
+repository = "https://github.com/spoorn/media-to-ascii"
+readme = "README.md"
+description = """
+CLI and utilities for converting media files (images/videos) to ascii outputs (output media file or print to console).  
+Supports most standard image formats, and video formats.
+"""
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
