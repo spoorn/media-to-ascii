@@ -29,7 +29,7 @@ jobs:
       - name: run-vcpkg
         # You may pin to the exact commit or the version.
         # uses: lukka/run-vcpkg@c62308335e15360efe9eba11298318f7f6a3606e
-        uses: lukka/run-vcpkg@v10.4
+        uses: lukka/run-vcpkg@c62308335e15360efe9eba11298318f7f6a3606e
 
       # Install opencv
       - name: Install opencv
