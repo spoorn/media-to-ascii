@@ -249,7 +249,7 @@ Pre-compiled binaries are available to download and use immediately under [Relea
 - `mediatoascii-x86_64-unknown-linux-gnu` for Linux-based systems (Ubuntu/WSL2/etc.)
 - `mediatoascii-x86_64-apple-darwin` for macOS
 
-You can then run the binary like any shell/script file in a terminal e.g. `./path/to/mediatoascii <ARGS>`|`cd path/to/mediatoascii && mediatoascii <ARGS>, or you can add it to your system PATH so it can be run from any directory.  You can easily find tutorials on the internet for "add a binary file to system PATH" for your OS system.
+Extract the artifacts, then you can then run the binary like any shell/script file in a terminal e.g. `./path/to/mediatoascii <ARGS>`|`cd path/to/mediatoascii && mediatoascii <ARGS>, or you can add it to your system PATH so it can be run from any directory.  You can easily find tutorials on the internet for "add a binary file to system PATH" for your OS system.
 
 ### Crates.io
 
