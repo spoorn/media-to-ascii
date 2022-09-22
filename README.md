@@ -159,6 +159,60 @@ OPTIONS:
 
 # Installation
 
+### Prerequisite: OpenCV
+
+OpenCV 4.x is required on the system.
+
+**mediatoascii** depends on [OpenCV Rust Bindings](https://github.com/twistedfall/opencv-rust) which require the OpenCV C++ libraries to be installed.  See below for instructions on different systems.  This should be a one-time setup.
+
+#### Ubuntu/Linux/WSL2
+
+You'll need to be on Ubuntu 20.04+ for OpenCV 4.x.
+
+To check Ubuntu version:
+
+```
+lsb_release -a
+```
+
+If you are on an older version of Ubuntu, see various [tutorials for updating your system](https://www.nextofwindows.com/how-to-upgrade-existing-wsl-wsl2-ubuntu-18-04-to-20-04).
+
+Install OpenCV and related libs:
+
+```
+sudo apt install libopencv-dev clang libclang-dev
+```
+
+Check OpenCV version:
+
+```
+dpkg -l | grep libopencv
+```
+
+#### MacOS
+
+Install OpenCV:
+
+```
+brew install opencv
+```
+
+Check OpenCV version:
+
+```
+brew info opencv
+```
+
+#### Windows
+
+TBD
+
+## Installing mediatoascii
+
+### Binaries
+
+Pre-compiled binaries are available to download and use immediately in the Releases tab.
+
 ## Crates.io
 
 ```commandline
@@ -182,7 +236,9 @@ cargo install --path .
 cargo run --release
 ```
 
-# Development
+# Troubleshooting
 
-## For Videos
-Make sure you have OpenCV installed if running via `cargo run` or from the source: https://github.com/twistedfall/opencv-rust
+1. If you're trying to update Ubuntu on WSL2, you may run into silent failures during the upgrade
+    - See https://askubuntu.com/questions/1340153/how-to-upgrade-ubuntu-18-04-to-20-04-in-wsl-when-wsl-export-fails
+3. `error while loading shared libraries: libopencv_videoio.so.4.2: cannot open shared object file: No such file or directory`
+    - Make sure you have OpenCV 4.x installed
