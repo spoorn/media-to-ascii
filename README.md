@@ -81,6 +81,9 @@ mediatoascii --video-path <FILE_PATH>
 
 # Saving ascii art as a video file (only .mp4 is supported as the output format)
 mediatoascii --video-path <FILE_PATH> -o ascii.mp4
+
+# Scale down the video by 2x so file size is smaller in storage and resolution
+mediatoascii --video-path <FILE_PATH> -o ascii.mp4 --scale-down 2.0
 ```
 
 ### Images
