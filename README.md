@@ -208,9 +208,7 @@ brew info opencv
 
 ### Windows
 
-TBD
-
-Highly recommend using WSL2 - allowing a Linux subsystem with a terminal to run on Windows: https://learn.microsoft.com/en-us/windows/wsl/install.
+Currently only supported through WSL2 - allowing a Linux subsystem with a terminal to run on Windows: https://learn.microsoft.com/en-us/windows/wsl/install.
 
 Then you can follow the Ubuntu setup above.  
 
