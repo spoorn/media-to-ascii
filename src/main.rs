@@ -163,19 +163,18 @@ impl Default for VideoConfig {
 }
 
 #[inline]
-fn ascii_to_str(ascii: &Vec<Vec<&str>>) -> String {
+fn ascii_to_str(ascii: &[Vec<&str>]) -> String {
     let mut buffer = String::default();
-    for y in 0..ascii.len() {
-        let row = &ascii[y];
-        for x in 0..row.len() {
-            buffer.push_str(row[x]);
+    for row in ascii {
+        for s in row {
+            buffer.push_str(s);
         }
         buffer.push('\n');
     }
     buffer
 }
 
-fn print_ascii(ascii: &Vec<Vec<&str>>) {
+fn print_ascii(ascii: &[Vec<&str>]) {
     print!("{}", ascii_to_str(ascii));
 }
 
@@ -193,7 +192,7 @@ fn check_valid_file<S: AsRef<str>>(path: S) {
     }
 }
 
-fn write_to_file<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &Vec<Vec<&str>>) {
+fn write_to_file<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &[Vec<&str>]) {
     let output_file = output_file.as_ref();
     check_file_exists(output_file, overwrite);
 
@@ -202,10 +201,9 @@ fn write_to_file<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &Vec<Vec
 
     match file_option {
         Ok(mut file) => {
-            for y in 0..ascii.len() {
-                let row = &ascii[y];
-                file.write(row.join("").as_bytes()).unwrap();
-                file.write("\r\n".as_bytes()).unwrap();
+            for row in ascii {
+                file.write_all(row.join("").as_bytes()).unwrap();
+                file.write_all("\r\n".as_bytes()).unwrap();
             }
         }
         Err(_) => {
@@ -215,7 +213,7 @@ fn write_to_file<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &Vec<Vec
 }
 
 #[inline]
-fn generate_ascii_image(ascii: &Vec<Vec<&str>>, size: &Size, invert: bool) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+fn generate_ascii_image(ascii: &[Vec<&str>], size: &Size, invert: bool) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
     let background_color = if invert { Rgb([255u8, 255u8, 255u8]) } else { Rgb([40u8, 42u8, 54u8]) };
     let text_color = if invert { Rgb([0u8, 0u8, 0u8]) } else { Rgb([255u8, 255u8, 255u8]) };
     let mut frame = RgbImage::from_pixel(size.width as u32, size.height as u32, background_color);
@@ -259,14 +257,14 @@ fn generate_ascii_image(ascii: &Vec<Vec<&str>>, size: &Size, invert: bool) -> Im
     frame
 }
 
-fn get_size_from_ascii(ascii: &Vec<Vec<&str>>) -> Size_<i32> {
+fn get_size_from_ascii(ascii: &[Vec<&str>]) -> Size_<i32> {
     Size::new(
         (ascii[0].len() as f32 * FONT_HEIGHT / MAGIC_HEIGHT_TO_WIDTH_RATIO) as i32,
         (ascii.len() as f32 * FONT_HEIGHT) as i32,
     )
 }
 
-fn write_to_image<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &Vec<Vec<&str>>, size: &Size, invert: bool) {
+fn write_to_image<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &[Vec<&str>], size: &Size, invert: bool) {
     let output_file = output_file.as_ref();
     check_file_exists(output_file, overwrite);
     match generate_ascii_image(ascii, size, invert).save(output_file) {
@@ -289,14 +287,14 @@ fn convert_image_to_ascii(config: &ImageConfig) -> Vec<Vec<&'static str>> {
     // Invert greyscale, for dark backgrounds
     let greyscale_ramp: &Vec<&str> = if config.invert { &REVERSE_GREYSCALE_RAMP } else { &GREYSCALE_RAMP };
 
-    let img = image::open(img_path).expect(format!("Image at {img_path} could not be opened").as_str());
+    let img = image::open(img_path).unwrap_or_else(|_| panic!("Image at {img_path} could not be opened"));
     let (width, height) = img.dimensions();
     let scaled_width = (width as f32 / scale_down) as usize;
     let scaled_height = ((height as f32 / scale_down) / height_sample_scale) as usize;
 
     let mut res = vec![vec![" "; scaled_width]; scaled_height];
 
-    for y in 0..res.len() {
+    for (y, row) in res.iter_mut().enumerate() {
         for x in 0..scaled_width {
             let pix = img.get_pixel(
                 (x as f32 * scale_down) as u32,
@@ -307,7 +305,7 @@ fn convert_image_to_ascii(config: &ImageConfig) -> Vec<Vec<&'static str>> {
                     + RGB_TO_GREYSCALE.1 * pix[1] as f32
                     + RGB_TO_GREYSCALE.2 * pix[2] as f32;
                 let index = (greyscale_value * (greyscale_ramp.len() - 1) as f32 / 255.0).ceil() as usize;
-                res[y][x] = greyscale_ramp[index];
+                row[x] = greyscale_ramp[index];
             }
         }
     }
@@ -319,16 +317,16 @@ fn process_image(config: ImageConfig) {
     let ascii = convert_image_to_ascii(&config);
 
     if let Some(file) = config.output_file_path.as_ref() {
-        write_to_file(file, config.overwrite.clone(), &ascii);
+        write_to_file(file, config.overwrite, &ascii);
     }
 
     if let Some(file) = config.output_image_path.as_ref() {
         write_to_image(
             file,
-            config.overwrite.clone(),
+            config.overwrite,
             &ascii,
             &get_size_from_ascii(&ascii),
-            config.invert.clone(),
+            config.invert,
         );
     }
 
@@ -355,7 +353,7 @@ fn convert_opencv_video_to_ascii(frame: &Mat, config: &VideoConfig) -> Vec<Vec<&
     // Invert greyscale, for dark backgrounds
     let greyscale_ramp: &Vec<&str> = if config.invert { &REVERSE_GREYSCALE_RAMP } else { &GREYSCALE_RAMP };
 
-    for y in 0..res.len() {
+    for (y, row) in res.iter_mut().enumerate() {
         for x in 0..scaled_width {
             let pix: Vec3b = *frame
                 .at_2d::<Vec3b>(
@@ -367,7 +365,7 @@ fn convert_opencv_video_to_ascii(frame: &Mat, config: &VideoConfig) -> Vec<Vec<&
                 + RGB_TO_GREYSCALE.1 * pix[1] as f32
                 + RGB_TO_GREYSCALE.2 * pix[2] as f32;
             let index = (greyscale_value * (greyscale_ramp.len() - 1) as f32 / 255.0).ceil() as usize;
-            res[y][x] = greyscale_ramp[index];
+            row[x] = greyscale_ramp[index];
         }
     }
 
@@ -375,7 +373,7 @@ fn convert_opencv_video_to_ascii(frame: &Mat, config: &VideoConfig) -> Vec<Vec<&
 }
 
 #[inline]
-fn write_to_ascii_video(config: &VideoConfig, ascii: &Vec<Vec<&str>>, video_writer: &mut VideoWriter, size: &Size) {
+fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_writer: &mut VideoWriter, size: &Size) {
     let frame = generate_ascii_image(ascii, size, config.invert);
 
     // Create opencv CV_8UC3 frame
@@ -418,7 +416,7 @@ fn process_video(config: VideoConfig) {
     }
 
     let mut capture = videoio::VideoCapture::from_file(video_path, CAP_ANY)
-        .expect(format!("Could not open video file at {video_path}").as_str());
+        .unwrap_or_else(|_| panic!("Could not open video file at {video_path}"));
     let num_frames = capture.get(videoio::CAP_PROP_FRAME_COUNT).unwrap() as u64;
     let orig_fps = capture.get(videoio::CAP_PROP_FPS).unwrap();
     let frame_time = 1.0 / orig_fps;
