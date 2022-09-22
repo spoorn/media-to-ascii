@@ -124,4 +124,12 @@ jobs:
       # Build
       - name: Build
         run: cargo build --release
+        
+      # Upload artifact: https://github.com/actions/upload-artifact
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: opencv-error-log
+          path: D:\a\media-to-ascii\media-to-ascii\vcpkg\buildtrees\opencv4\install-x86-windows-rel-out.log
+          retention-days: 1
 
