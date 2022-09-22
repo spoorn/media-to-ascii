@@ -78,7 +78,7 @@ jobs:
         run: |
           echo "MEDIATOASCII_VERSION=$(perl -ne 'print "$1\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)" >> $GITHUB_ENV
           chmod +x target/release/mediatoascii
-          zip -r mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.tar.gz target/release/mediatoascii
+          zip -r mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.zip target/release/mediatoascii
         
       # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
