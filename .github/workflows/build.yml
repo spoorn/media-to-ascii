@@ -104,9 +104,10 @@ jobs:
           # Specify the full SHA-1 hash of a Git commit (not a branch name, nor a tag!) that establishes which version of vcpkg needs to be used. When using vcpkg as a Git submodule, this input is *not* needed as implicitly specified by the submodule.
           vcpkgGitCommitId: d52632d9a0c4a5b57de285b1e03722a067dd80eb
           
-      # Install llvm
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v1.5.4
+      - name: Install Clang
+        # You may pin to the exact commit or the version.
+        # uses: egor-tensin/setup-clang@01d437c0618e76d3c44e7d58f5d175c75cb37bac
+        uses: egor-tensin/setup-clang@v1
 
       # Install opencv
       - name: Install opencv
