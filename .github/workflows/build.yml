@@ -39,14 +39,16 @@ jobs:
         
       # Ready artifacts for upload
       - name: Prepare Artifacts
-        run: mv target/release/mediatoascii target/release/mediatoascii-x86_64-unknown-linux-gnu
+        run: |
+          echo "MEDIATOASCII_VERSION=$(perl -ne 'print "$1\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)" >> $GITHUB_ENV
+          tar -czvf mediatoascii-x86_64-unknown-linux-gnu-$MEDIATOASCII_VERSION.tar.gz target/release/mediatoascii
         
       # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: mediatoascii-x86_64-unknown-linux-gnu
-          path: target/release/mediatoascii-x86_64-unknown-linux-gnu
+          path: mediatoascii-x86_64-unknown-linux-gnu-*
           retention-days: 1
         
   macos-build:
@@ -72,14 +74,16 @@ jobs:
         
       # Ready artifacts for upload
       - name: Prepare Artifacts
-        run: mv target/release/mediatoascii target/release/mediatoascii-x86_64-apple-darwin
+        run: |
+          echo "MEDIATOASCII_VERSION=$(perl -ne 'print "$1\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)" >> $GITHUB_ENV
+          tar -czvf mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.tar.gz target/release/mediatoascii
         
       # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: mediatoascii-x86_64-apple-darwin
-          path: target/release/mediatoascii-x86_64-apple-darwin
+          path: mediatoascii-x86_64-apple-darwin-*
           retention-days: 1
         
   windows-build:
