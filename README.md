@@ -213,13 +213,34 @@ Then you can follow the Ubuntu setup above.
 
 Note: on WSL2, drives are prefixed with `/mnt/c/` rather than `C:/`
 
+### Arch Linux
+
+Install OpenCV:
+
+```
+pacman -S clang qt5-base opencv
+```
+
 ## Installing mediatoascii
 
 Below are different ways you can install **mediatoascii**
 
 ### Binaries
 
-Pre-compiled binaries are available to download and use immediately in the Releases tab.
+Pre-compiled binaries are available to download and use immediately under [Releases](https://github.com/spoorn/media-to-ascii/releases).  These don't require compiling/building dependencies so installation is much faster.  Select the one for your system
+
+- `mediatoascii-x86_64-unknown-linux-gnu` for Linux-based systems (Ubuntu/WSL2/etc.)
+- `mediatoascii-x86_64-apple-darwin` for macOS
+
+Or via [Cargo binstall](https://github.com/cargo-bins/cargo-binstall)
+
+```
+# Install cargo-binstall
+cargo install cargo-binstall
+
+# Install mediatoascii
+cargo binstall mediatoascii
+```
 
 ### Crates.io
 
