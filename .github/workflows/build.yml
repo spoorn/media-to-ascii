@@ -41,7 +41,7 @@ jobs:
       - name: Prepare Artifacts
         run: mv target/release/mediatoascii target/release/mediatoascii-x86_64-unknown-linux-gnu
         
-      # Upload artifact
+      # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -74,7 +74,7 @@ jobs:
       - name: Prepare Artifacts
         run: mv target/release/mediatoascii target/release/mediatoascii-x86_64-apple-darwin
         
-      # Upload artifact
+      # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -103,12 +103,16 @@ jobs:
         with:
           # Specify the full SHA-1 hash of a Git commit (not a branch name, nor a tag!) that establishes which version of vcpkg needs to be used. When using vcpkg as a Git submodule, this input is *not* needed as implicitly specified by the submodule.
           vcpkgGitCommitId: d52632d9a0c4a5b57de285b1e03722a067dd80eb
+          
+      # Install llvm
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1.5.4
 
       # Install opencv
       - name: Install opencv
         run: |
           vcpkg update
-          vcpkg install llvm opencv4[contrib,nonfree]
+          vcpkg install opencv4[contrib,nonfree]
         
       # Build
       - name: Build
