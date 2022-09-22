@@ -116,10 +116,10 @@ jobs:
         uses: egor-tensin/setup-clang@v1
 
       # Install opencv
-#       - name: Install opencv
-#         run: |
-#           vcpkg update
-#           vcpkg install opencv4[contrib,nonfree]
+      - name: Install opencv
+        run: |
+          vcpkg update
+          vcpkg install opencv4
         
       # Build
       - name: Build
