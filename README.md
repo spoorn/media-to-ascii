@@ -159,13 +159,13 @@ OPTIONS:
 
 # Installation
 
-### Prerequisite: OpenCV
+## Prerequisite: OpenCV
 
 OpenCV 4.x is required on the system.
 
 **mediatoascii** depends on [OpenCV Rust Bindings](https://github.com/twistedfall/opencv-rust) which require the OpenCV C++ libraries to be installed.  See below for instructions on different systems.  This should be a one-time setup.
 
-#### Ubuntu/Linux/WSL2
+### Ubuntu/Linux/WSL2
 
 You'll need to be on Ubuntu 20.04+ for OpenCV 4.x.
 
@@ -189,7 +189,7 @@ Check OpenCV version:
 dpkg -l | grep libopencv
 ```
 
-#### MacOS
+### MacOS
 
 Install OpenCV:
 
@@ -203,23 +203,25 @@ Check OpenCV version:
 brew info opencv
 ```
 
-#### Windows
+### Windows
 
 TBD
 
 ## Installing mediatoascii
 
+Below are different ways you can install **mediatoascii**
+
 ### Binaries
 
 Pre-compiled binaries are available to download and use immediately in the Releases tab.
 
-## Crates.io
+### Crates.io
 
 ```commandline
 cargo install mediatoascii
 ```
 
-## Git
+### Git
 
 ```commandline
 # Clone repository and cd into it
