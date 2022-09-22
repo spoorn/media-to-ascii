@@ -170,7 +170,7 @@ OpenCV 4.x is required on the system.
 
 ### Ubuntu/Linux/WSL2
 
-You'll need to be on Ubuntu 20.04+ for OpenCV 4.x.
+You'll need to be on `Ubuntu 20.04+` for OpenCV 4.x.
 
 To check Ubuntu version:
 
@@ -214,7 +214,7 @@ Highly recommend using WSL2 - allowing a Linux subsystem with a terminal to run 
 
 Then you can follow the Ubuntu setup above.  
 
-Note: on WSL2, drives are prefixed with `/mnt/c/` rather than `C:/`
+Note: on WSL2, drives in paths are prefixed with `/mnt/c/` rather than `C:/`
 
 ### Arch Linux
 
@@ -228,14 +228,11 @@ pacman -S clang qt5-base opencv
 
 Below are different ways you can install **mediatoascii**
 
-### Binaries
+#### [Optional] Cargo
 
-Pre-compiled binaries are available to download and use immediately under [Releases](https://github.com/spoorn/media-to-ascii/releases).  These don't require compiling/building dependencies so installation is much faster.  Select the one for your system
+If you choose an installation method below that involves the `cargo` command, you'll want to install the rust toolchain which includes `cargo` if you don't already have it: https://doc.rust-lang.org/cargo/getting-started/installation.html
 
-- `mediatoascii-x86_64-unknown-linux-gnu` for Linux-based systems (Ubuntu/WSL2/etc.)
-- `mediatoascii-x86_64-apple-darwin` for macOS
-
-Or via [Cargo binstall](https://github.com/cargo-bins/cargo-binstall)
+### [Recommended] [Cargo binstall](https://github.com/cargo-bins/cargo-binstall) Binaries
 
 ```
 # Install cargo-binstall
@@ -244,6 +241,15 @@ cargo install cargo-binstall
 # Install mediatoascii
 cargo binstall mediatoascii
 ```
+
+### Portable Binaries
+
+Pre-compiled binaries are available to download and use immediately under [Releases](https://github.com/spoorn/media-to-ascii/releases).  These don't require compiling/building dependencies so installation is much faster.  Select the one for your system
+
+- `mediatoascii-x86_64-unknown-linux-gnu` for Linux-based systems (Ubuntu/WSL2/etc.)
+- `mediatoascii-x86_64-apple-darwin` for macOS
+
+You can then run the binary like any shell/script file in a terminal e.g. `./path/to/mediatoascii <ARGS>`|`cd path/to/mediatoascii && mediatoascii <ARGS>, or you can add it to your system PATH so it can be run from any directory.  You can easily find tutorials on the internet for "add a binary file to system PATH" for your OS system.
 
 ### Crates.io
 
