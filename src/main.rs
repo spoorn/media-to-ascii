@@ -1,4 +1,5 @@
 use clap::{ArgGroup, Parser};
+
 use crate::image::{ImageConfigBuilder, process_image};
 use crate::video::{process_video, VideoConfigBuilder};
 
@@ -59,6 +60,29 @@ struct Cli {
 }
 
 fn main() {
+    // if let Ok(mut file) = File::open(Path::new("output.mp4")) {
+    //     let mut buffer = [0u8; 1024];
+    //     let mut output = File::create("outputtest.mp4").unwrap();
+    //
+    //     loop {
+    //         match file.read(&mut buffer) {
+    //             Ok(size) => {
+    //                 if size == 0 {
+    //                     println!("Finished");
+    //                     break;
+    //                 }
+    //                 println!("read {size} bytes");
+    //                 if let Err(e) = output.write_all(&buffer[0..size]) {
+    //                     eprintln!("Error: {e}");
+    //                 }
+    //             }
+    //             Err(e) => {
+    //                 eprintln!("Error: {e}");
+    //             }
+    //         }
+    //     }
+    // }
+
     let cli = Cli::parse();
     // Note: Rust plugin can expand procedural macros using https://github.com/intellij-rust/intellij-rust/issues/6908
 
