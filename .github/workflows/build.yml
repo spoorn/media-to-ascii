@@ -13,9 +13,11 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+# Generates binaries for different platforms, which will be uploaded to the Actions page.
+# We then manually uplaod them into the Release's assets.
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
+  # Builds for linux
   ubuntu-build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -27,7 +29,7 @@ jobs:
       
       # Install rust
       - name: Install rust
-        run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
       # Install opencv
       - name: Install opencv
@@ -54,7 +56,7 @@ jobs:
         
   macos-build:
     # The type of runner that the job will run on
-    runs-on: 	macos-12
+    runs-on: macos-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -63,7 +65,7 @@ jobs:
 
       # Install rust
       - name: Install rust
-        run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
       # Install opencv
       - name: Install opencv
@@ -99,7 +101,7 @@ jobs:
       
       # Install rust
       - name: Install rust
-        run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       
       # Install vcpkg
       - name: run-vcpkg

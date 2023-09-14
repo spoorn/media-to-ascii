@@ -166,7 +166,11 @@ OPTIONS:
 
 OpenCV 4.x is required on the system.
 
-**mediatoascii** depends on [OpenCV Rust Bindings](https://github.com/twistedfall/opencv-rust) which require the OpenCV C++ libraries to be installed.  See below for instructions on different systems.  This should be a one-time setup.
+**mediatoascii** depends on [OpenCV Rust Bindings](https://github.com/twistedfall/opencv-rust) which require the OpenCV C++ libraries to be installed.  
+
+See https://github.com/twistedfall/opencv-rust#getting-opencv for instructions on different systems.  
+
+Below is an abbreviation
 
 ### Ubuntu/Linux/WSL2
 
@@ -208,18 +212,41 @@ brew info opencv
 
 ### Windows
 
-Currently only supported through WSL2 - allowing a Linux subsystem with a terminal to run on Windows: https://learn.microsoft.com/en-us/windows/wsl/install.
+#### Direct
+
+Follow https://github.com/twistedfall/opencv-rust#windows-package (recommend chocolatey route).
+
+Make sure you set the environment variables `OPENCV_LINK_LIBS`, `OPENCV_LINK_PATHS` and `OPENCV_INCLUDE_PATHS` properly, according to https://github.com/twistedfall/opencv-rust/issues/118#issuecomment-619608278
+
+Also, make sure the opencv `bin/` is in your PATH: https://github.com/twistedfall/opencv-rust/issues/113
+
+If you see this error (or some other ones):
+
+```bash
+CMake Error at ports/atlmfc/portfile.cmake:7 (message):
+  Unable to locate 'afxres.h'.  Ensure you have installed the ATL/MFC
+  component of Visual Studio.
+```
+
+Make sure you have Visual Studio installed with `Desktop development with C++`, ATL and MFC checked.  In newer versions of Visual Studio, these may be [defaulted to disabled](https://learn.microsoft.com/en-us/cpp/mfc/mfc-and-atl?view=msvc-170).
+You can install them in the Visual Studio Installer when you modify the Visual Studio installation.
+
+#### WSL
+
+You can also install opencv through WSL2 - allowing a Linux subsystem with a terminal to run on Windows: https://learn.microsoft.com/en-us/windows/wsl/install.
 
 Then you can follow the Ubuntu setup above.  
 
 Note: on WSL2, drives in paths are prefixed with `/mnt/c/` rather than `C:/`
+
+
 
 ### Arch Linux
 
 Install OpenCV:
 
 ```
-pacman -S clang qt5-base opencv
+pacman -S clang qt6-base opencv
 ```
 
 ## Installing mediatoascii

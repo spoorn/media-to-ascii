@@ -1,26 +1,20 @@
-use clap::{AppSettings, ArgGroup, Parser};
-
-use crate::image_to_ascii::{process_image, ImageConfigBuilder};
-use crate::video_to_ascii::{process_video, VideoConfigBuilder};
-
-#[path = "image/image.rs"]
-mod image_to_ascii;
-
-#[path = "video/video.rs"]
-mod video_to_ascii;
+use clap::{ArgGroup, Parser};
+use crate::image::{ImageConfigBuilder, process_image};
+use crate::video::{process_video, VideoConfigBuilder};
 
 mod util;
+mod image;
+mod video;
 
 /// Converts media (images and videos) to ascii, and displays output either as an output media file
 /// or in the terminal.
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
-#[clap(global_setting(AppSettings::DeriveDisplayOrder))]
 #[clap(group(
     ArgGroup::new("input_path")
         .required(true)
         .multiple(false)
-        .args(&["image-path", "video-path"]),
+        .args(&["image_path", "video_path"]),
 ))]
 struct Cli {
     /// Input Image file.  One of image_path, or video_path must be populated.

@@ -1,1 +1,2 @@
-pub mod image;
+mod image;
+pub use self::image::*;

@@ -1,1 +1,2 @@
-pub mod video;
+mod video;
+pub use video::*;

@@ -9,7 +9,7 @@ use opencv::core::{Mat, MatTraitConst, MatTraitManual, Scalar, Size, Vec3b, CV_8
 use opencv::videoio;
 use opencv::videoio::{VideoCaptureTrait, VideoCaptureTraitConst, VideoWriter, VideoWriterTrait, CAP_ANY};
 
-use crate::image_to_ascii::generate_ascii_image;
+use crate::image::generate_ascii_image;
 use crate::util::constants::{GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE};
 use crate::util::file_util::{check_file_exists, check_valid_file};
 use crate::util::{ascii_to_str, get_size_from_ascii};
