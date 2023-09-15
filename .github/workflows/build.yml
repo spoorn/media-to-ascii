@@ -160,7 +160,7 @@ jobs:
       - name: Prepare Artifacts
         run: |
           $env:MEDIATOASCII_VERSION=$(perl -ne 'print "$1\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
-          zip -j mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.zip target/release/mediatoascii
+          Compress-Archive -Path target/release/mediatoascii.exe -Destination ./mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.zip 
         
       # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
