@@ -67,19 +67,24 @@ jobs:
       - name: Install rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
+      # See https://github.com/orgs/community/discussions/26635
+      - name: brew bash
+        run: brew install bash
+
       # dynamic link libclang correctly, according to https://github.com/twistedfall/opencv-rust
       - name: Dynamic Link libclang
+        shell: /usr/local/bin/bash {0}
         run: |
-          xcode-select --print-path
-          locate libclang.dylib
           export DYLD_FALLBACK_LIBRARY_PATH="$(xcode-select --print-path)/Toolchains/XcodeDefault.xctoolchain/usr/lib/"
 
       # Install opencv
       - name: Install opencv
+        shell: /usr/local/bin/bash {0}
         run: brew install opencv
         
       # Build
       - name: Build
+        shell: /usr/local/bin/bash {0}
         run: cargo build --release
         
       # Ready artifacts for upload
@@ -142,15 +147,13 @@ jobs:
       #     vcpkg install llvm opencv4[contrib,nonfree]
 
       # Set opencv dynamic link env vars
-      - name: OpenCV Dynamic Link Env Vars
-        run: |
-          $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name)
-          $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent)
-          $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"
+      # - name: OpenCV Dynamic Link Env Vars
+      #   run: |
+          
         
       # Build
       - name: Build
-        run: cargo build --release
+        run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
         
       # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
