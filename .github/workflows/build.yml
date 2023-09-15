@@ -69,7 +69,9 @@ jobs:
 
       # dynamic link libclang correctly, according to https://github.com/twistedfall/opencv-rust
       - name: Dynamic Link libclang
-        run: export DYLD_FALLBACK_LIBRARY_PATH="$(xcode-select --print-path)/usr/lib/"
+        run: |
+          xcode-select --install
+          export DYLD_FALLBACK_LIBRARY_PATH="$(xcode-select --print-path)/usr/lib/"
 
       # Install opencv
       - name: Install opencv
@@ -123,7 +125,7 @@ jobs:
         uses: crazy-max/ghaction-chocolatey@v3.0.0
         with:
           # Arguments to pass to Chocolatey
-          args: choco install llvm opencv 
+          args: install llvm opencv 
           # Docker image to use
           #image: # optional, default is ghcr.io/crazy-max/ghaction-chocolatey
             
