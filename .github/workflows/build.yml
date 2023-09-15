@@ -67,6 +67,10 @@ jobs:
       - name: Install rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
+      # dynamic link libclang correctly, according to https://github.com/twistedfall/opencv-rust
+      - name: Dynamic Link libclang
+        run: export DYLD_FALLBACK_LIBRARY_PATH="$(xcode-select --print-path)/usr/lib/"
+
       # Install opencv
       - name: Install opencv
         run: brew install opencv
@@ -102,26 +106,37 @@ jobs:
       # Install rust
       - name: Install rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-      
-      # Install vcpkg
-      - name: run-vcpkg
-        # You may pin to the exact commit or the version.
-        # uses: lukka/run-vcpkg@c62308335e15360efe9eba11298318f7f6a3606e
-        uses: lukka/run-vcpkg@v10.4
-        with:
-          # Specify the full SHA-1 hash of a Git commit (not a branch name, nor a tag!) that establishes which version of vcpkg needs to be used. When using vcpkg as a Git submodule, this input is *not* needed as implicitly specified by the submodule.
-          vcpkgGitCommitId: d52632d9a0c4a5b57de285b1e03722a067dd80eb
-          
-      - name: Install Clang
-        # You may pin to the exact commit or the version.
-        # uses: egor-tensin/setup-clang@01d437c0618e76d3c44e7d58f5d175c75cb37bac
-        uses: egor-tensin/setup-clang@v1
 
-      # Install opencv
-      - name: Install opencv
-        run: |
-          vcpkg update
-          vcpkg install llvm opencv4[contrib,nonfree]
+      # DEPRECATED: vcpkg takes up WAY too much space for some reason.  Use chocolatey instead
+      # Install vcpkg
+      # - name: run-vcpkg
+      #   # You may pin to the exact commit or the version.
+      #   # uses: lukka/run-vcpkg@c62308335e15360efe9eba11298318f7f6a3606e
+      #   uses: lukka/run-vcpkg@v10.4
+      #   with:
+      #     # Specify the full SHA-1 hash of a Git commit (not a branch name, nor a tag!) that establishes which version of vcpkg needs to be used. When using vcpkg as a Git submodule, this input is *not* needed as implicitly specified by the submodule.
+      #     vcpkgGitCommitId: d52632d9a0c4a5b57de285b1e03722a067dd80eb
+
+      - name: Chocolatey Action
+        # You may pin to the exact commit or the version.
+        # uses: crazy-max/ghaction-chocolatey@0e015857dd851f84fcb7fb53380eb5c4c8202333
+        uses: crazy-max/ghaction-chocolatey@v3.0.0
+        with:
+          # Arguments to pass to Chocolatey
+          args: choco install llvm opencv 
+          # Docker image to use
+          #image: # optional, default is ghcr.io/crazy-max/ghaction-chocolatey
+            
+      # - name: Install Clang
+      #   # You may pin to the exact commit or the version.
+      #   # uses: egor-tensin/setup-clang@01d437c0618e76d3c44e7d58f5d175c75cb37bac
+      #   uses: egor-tensin/setup-clang@v1
+
+      # # Install opencv
+      # - name: Install opencv
+      #   run: |
+      #     vcpkg update
+      #     vcpkg install llvm opencv4[contrib,nonfree]
         
       # Build
       - name: Build
