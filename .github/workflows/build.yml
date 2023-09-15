@@ -70,6 +70,8 @@ jobs:
       # dynamic link libclang correctly, according to https://github.com/twistedfall/opencv-rust
       - name: Dynamic Link libclang
         run: |
+          xcode-select --print-path
+          locate libclang.dylib
           export DYLD_FALLBACK_LIBRARY_PATH="$(xcode-select --print-path)/Toolchains/XcodeDefault.xctoolchain/usr/lib/"
 
       # Install opencv
@@ -144,7 +146,7 @@ jobs:
         run: |
           $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name)
           $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent)
-          $env:OPENCV_INCLUDE_PATHS=C:\tools\opencv\build\include
+          $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"
         
       # Build
       - name: Build
