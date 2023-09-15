@@ -159,16 +159,15 @@ jobs:
       # Ready artifacts for upload
       - name: Prepare Artifacts
         run: |
-          export MEDIATOASCII_VERSION=$(perl -ne 'print "$1\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
-          chmod +x target/release/mediatoascii
-          tar -czvf mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.tar.gz -C target/release/ mediatoascii
+          $env:MEDIATOASCII_VERSION=$(perl -ne 'print "$1\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
+          zip -j mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.zip target/release/mediatoascii
         
       # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: mediatoascii-x86_64-pc-windows-gnu
-          path: mediatoascii-x86_64-pc-windows-gnu-*.tar.gz
+          path: mediatoascii-x86_64-pc-windows-gnu-*.zip
           retention-days: 1
         
       # Upload artifact: https://github.com/actions/upload-artifact
