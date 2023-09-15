@@ -74,13 +74,14 @@ jobs:
       # dynamic link libclang correctly, according to https://github.com/twistedfall/opencv-rust
       - name: Dynamic Link libclang
         shell: /usr/local/bin/bash {0}
-        run: |
-          export DYLD_FALLBACK_LIBRARY_PATH="$(xcode-select --print-path)/Toolchains/XcodeDefault.xctoolchain/usr/lib/"
+        run: echo "DYLD_FALLBACK_LIBRARY_PATH=$(xcode-select --print-path)/Toolchains/XcodeDefault.xctoolchain/usr/lib/" &gt;&gt; $GITHUB_ENV
 
       # Install opencv
       - name: Install opencv
         shell: /usr/local/bin/bash {0}
-        run: brew install opencv
+        run: |
+          echo ${DYLD_FALLBACK_LIBRARY_PATH:-is_empty}
+          brew install opencv
         
       # Build
       - name: Build
@@ -154,12 +155,31 @@ jobs:
       # Build
       - name: Build
         run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
+
+      # Build
+      - name: Build
+        run: cargo build --release
+        
+      # Ready artifacts for upload
+      - name: Prepare Artifacts
+        run: |
+          export MEDIATOASCII_VERSION=$(perl -ne 'print "$1\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
+          chmod +x target/release/mediatoascii
+          tar -czvf mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.tar.gz -C target/release/ mediatoascii
         
       # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: opencv-error-log
-          path: D:\a\media-to-ascii\media-to-ascii\vcpkg\buildtrees\opencv4\install-x86-windows-rel-out.log
+          name: mediatoascii-x86_64-pc-windows-gnu
+          path: mediatoascii-x86_64-pc-windows-gnu-*.tar.gz
           retention-days: 1
+        
+      # Upload artifact: https://github.com/actions/upload-artifact
+      # - name: Upload Artifacts
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: opencv-error-log
+      #     path: D:\a\media-to-ascii\media-to-ascii\vcpkg\buildtrees\opencv4\install-x86-windows-rel-out.log
+      #     retention-days: 1
 
