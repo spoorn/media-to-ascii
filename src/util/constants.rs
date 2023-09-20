@@ -22,7 +22,7 @@ pub static DARK_BGR_SCALAR: Scalar = Scalar::new(54.0, 42.0, 40.0, 0.0);
 
 /// When creating the output ascii video, for Cascadia font, this is a magic height to width ratio
 /// for the video dimensions so the text fits to the frames' ends
-pub const MAGIC_HEIGHT_TO_WIDTH_RATIO: f32 = 2.048;
+pub const MAGIC_HEIGHT_TO_WIDTH_RATIO: f32 = 2.046;
 pub static CASCADIA_FONT: Lazy<Font<'static>> = Lazy::new(|| {
     let font_data = include_bytes!("fonts/Cascadia.ttf");
     Font::try_from_bytes(font_data).unwrap()
@@ -36,8 +36,7 @@ pub static CASCADIA_FONT: Lazy<Font<'static>> = Lazy::new(|| {
 //     "~", "<", ">", "i", "!", "l", "I", ";", ":", ",", "\"", "^", "`", "'", ".", " ",
 // ];
 // Custom toned down greyscale ramp that seems to produce better images visually
-pub const GREYSCALE_RAMP: &[&str] =
-    &[" ", ".", "^", ":", "~", "?", "7", "Y", "J", "5", "P", "G", "#", "&", "B", "@"];
+pub const GREYSCALE_RAMP: &[&str] = &[" ", ".", "^", ":", "~", "?", "7", "Y", "J", "5", "P", "G", "#", "&", "B", "@"];
 
 // No const reverse: https://github.com/rust-lang/rust/issues/100784
 pub const REVERSE_GREYSCALE_RAMP: &[&str] =

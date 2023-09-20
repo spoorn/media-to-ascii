@@ -12,7 +12,8 @@ use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, Parall
 
 use crate::image::generate_ascii_image;
 use crate::util::constants::{
-    DARK_BGR_SCALAR, GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE, WHITE_BGR_SCALAR,
+    DARK_BGR_SCALAR, GREYSCALE_RAMP, MAGIC_HEIGHT_TO_WIDTH_RATIO, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE,
+    WHITE_BGR_SCALAR,
 };
 use crate::util::file_util::{check_file_exists, check_valid_file};
 use crate::util::{ascii_to_str, get_size_from_ascii, UnsafeMat};
@@ -54,13 +55,15 @@ impl Default for VideoConfig {
 #[inline]
 pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) -> Vec<Vec<&'static str>> {
     let scale_down = config.scale_down;
-    let height_sample_scale = config.height_sample_scale;
+    let height_sample_scale = MAGIC_HEIGHT_TO_WIDTH_RATIO;
 
-    let width = frame.0.cols();
-    let height = frame.0.rows();
+    let width = frame.cols();
+    let height = frame.rows();
+    //println!("width: {}, height: {}", width, height);
     // TODO: scaled dims
     let scaled_width = (width as f32 / scale_down) as usize;
     let scaled_height = ((height as f32 / scale_down) / height_sample_scale) as usize;
+    //println!("scaled scaled_width: {}, scaled_height: {}", scaled_width, scaled_height);
     let mut res = vec![vec![" "; scaled_width]; scaled_height];
 
     // Invert greyscale, for dark backgrounds
@@ -68,9 +71,10 @@ pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) ->
 
     // SAFETY: operates pixels independently
     res.par_iter_mut().enumerate().for_each(|(y, row)| {
+        // TODO: is this parallelizable?
+        // TODO: This is a bad sampling method when scaling down
         (0..scaled_width).for_each(|x| {
             let pix: &Vec3b = frame
-                .0
                 .at_2d::<Vec3b>((y as f32 * scale_down * height_sample_scale) as i32, (x as f32 * scale_down) as i32)
                 .unwrap();
             let greyscale_value = RGB_TO_GREYSCALE.0 * pix[0] as f32
@@ -87,6 +91,7 @@ pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) ->
 #[inline]
 pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_writer: &mut VideoWriter, size: &Size) {
     let frame = generate_ascii_image(ascii, size, config.invert);
+    //println!("image frame width: {}, height: {}", frame.width(), frame.height());
 
     // Create opencv CV_8UC3 frame
     // opencv uses BGR format
@@ -170,6 +175,7 @@ pub fn process_video(config: VideoConfig) {
             if i == 0 {
                 // Initialize VideoWriter for real
                 output_frame_size = get_size_from_ascii(&ascii);
+                //println!("frame size: {:?}", output_frame_size);
                 let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
                 // TODO: allow any video output
                 video_writer = VideoWriter::new(

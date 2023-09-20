@@ -44,6 +44,7 @@ impl Default for ImageConfig {
 pub fn generate_ascii_image(ascii: &[Vec<&str>], size: &Size, invert: bool) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
     let background_color = if invert { WHITE_RGB } else { DARK_RGB };
     let text_color = if invert { BLACK_RGB } else { WHITE_RGB };
+    //println!("image size: {:?}", size);
     let frame = UnsafeImageBuffer(UnsafeCell::new(Some(RgbImage::from_pixel(
         size.width as u32,
         size.height as u32,
