@@ -5,10 +5,11 @@ use image::{GenericImageView, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use opencv::core::Size;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rusttype::Scale;
 
 use crate::util::constants::{
-    BLACK_RGB, CASCADIA_FONT, DARK_RGB, FONT_HEIGHT, FONT_SCALE, GREYSCALE_RAMP, MAGIC_HEIGHT_TO_WIDTH_RATIO,
-    REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE, WHITE_RGB,
+    BLACK_RGB, CASCADIA_FONT, DARK_RGB, GREYSCALE_RAMP, MAGIC_HEIGHT_TO_WIDTH_RATIO, REVERSE_GREYSCALE_RAMP,
+    RGB_TO_GREYSCALE, WHITE_RGB,
 };
 use crate::util::file_util::{check_file_exists, check_valid_file, write_to_file};
 use crate::util::{get_size_from_ascii, print_ascii, UnsafeImageBuffer};
@@ -18,6 +19,7 @@ use crate::util::{get_size_from_ascii, print_ascii, UnsafeImageBuffer};
 pub struct ImageConfig {
     image_path: String,
     scale_down: f32,
+    font_size: f32,
     height_sample_scale: f32,
     invert: bool,
     output_file_path: Option<String>,
@@ -30,6 +32,7 @@ impl Default for ImageConfig {
         ImageConfig {
             image_path: "".to_string(),
             scale_down: 1.0,
+            font_size: 12.0,
             height_sample_scale: MAGIC_HEIGHT_TO_WIDTH_RATIO,
             invert: false,
             output_file_path: None,
@@ -40,7 +43,12 @@ impl Default for ImageConfig {
 }
 
 #[inline]
-pub fn generate_ascii_image(ascii: &[Vec<&str>], size: &Size, invert: bool) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
+pub fn generate_ascii_image(
+    ascii: &[Vec<&str>],
+    size: &Size,
+    invert: bool,
+    font_size: f32,
+) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
     let background_color = if invert { WHITE_RGB } else { DARK_RGB };
     let text_color = if invert { BLACK_RGB } else { WHITE_RGB };
     //println!("image size: {:?}", size);
@@ -62,8 +70,8 @@ pub fn generate_ascii_image(ascii: &[Vec<&str>], size: &Size, invert: bool) -> I
             frame.get().as_mut().unwrap().as_mut().unwrap(),
             text_color,
             0,
-            (row as f32 * FONT_HEIGHT) as i32,
-            FONT_SCALE,
+            (row as f32 * font_size) as i32,
+            Scale::uniform(font_size),
             &CASCADIA_FONT,
             text_row.as_str(),
         );
@@ -72,10 +80,17 @@ pub fn generate_ascii_image(ascii: &[Vec<&str>], size: &Size, invert: bool) -> I
     frame.0.into_inner().unwrap()
 }
 
-pub fn write_to_image<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &[Vec<&str>], size: &Size, invert: bool) {
+pub fn write_to_image<S: AsRef<str>>(
+    output_file: S,
+    overwrite: bool,
+    ascii: &[Vec<&str>],
+    size: &Size,
+    invert: bool,
+    font_size: f32,
+) {
     let output_file = output_file.as_ref();
     check_file_exists(output_file, overwrite);
-    match generate_ascii_image(ascii, size, invert).save(output_file) {
+    match generate_ascii_image(ascii, size, invert, font_size).save(output_file) {
         Ok(_) => {
             println!("Successfully saved ascii image to {}", output_file);
         }
@@ -131,8 +146,9 @@ pub fn process_image(config: ImageConfig) {
             file,
             config.overwrite,
             &ascii,
-            &get_size_from_ascii(&ascii, config.height_sample_scale),
+            &get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size),
             config.invert,
+            config.font_size,
         );
     }
 

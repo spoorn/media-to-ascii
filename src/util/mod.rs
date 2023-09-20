@@ -4,8 +4,6 @@ use std::ops::{Deref, DerefMut};
 use image::{ImageBuffer, Rgb};
 use opencv::core::{Mat, Size, Size_};
 
-use crate::util::constants::FONT_HEIGHT;
-
 pub mod constants;
 pub mod file_util;
 
@@ -63,9 +61,6 @@ pub fn print_ascii(ascii: &[Vec<&str>]) {
     print!("{}", ascii_to_str(ascii));
 }
 
-pub fn get_size_from_ascii(ascii: &[Vec<&str>], height_sample_scale: f32) -> Size_<i32> {
-    Size::new(
-        (ascii[0].len() as f32 * FONT_HEIGHT / height_sample_scale) as i32,
-        (ascii.len() as f32 * FONT_HEIGHT) as i32,
-    )
+pub fn get_size_from_ascii(ascii: &[Vec<&str>], height_sample_scale: f32, font_size: f32) -> Size_<i32> {
+    Size::new((ascii[0].len() as f32 * font_size / height_sample_scale) as i32, (ascii.len() as f32 * font_size) as i32)
 }

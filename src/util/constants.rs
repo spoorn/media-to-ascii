@@ -1,14 +1,10 @@
 use image::Rgb;
 use once_cell::sync::Lazy;
 use opencv::core::Scalar;
-use rusttype::{Font, Scale};
+use rusttype::Font;
 
 /// NTSC formula: https://en.wikipedia.org/wiki/Grayscale
 pub const RGB_TO_GREYSCALE: (f32, f32, f32) = (0.299, 0.587, 0.114);
-/// Font height of ascii when producing videos, approximately the number of pixels
-pub const FONT_HEIGHT: f32 = 12.0;
-/// Font scale for x and y
-pub static FONT_SCALE: Scale = Scale { x: FONT_HEIGHT, y: FONT_HEIGHT };
 /// White RGB
 pub static WHITE_RGB: Rgb<u8> = Rgb([255u8, 255u8, 255u8]);
 /// Faded black RGB

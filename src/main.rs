@@ -26,9 +26,16 @@ struct Cli {
     #[clap(long, value_parser)]
     video_path: Option<String>,
     /// Multiplier to scale down input dimensions by when converting to ASCII.  For large frames,
-    /// recommended to scale down more so output file size is more reasonable.
+    /// recommended to scale down more so output file size is more reasonable.  Affects output quality.
+    /// Note: the output dimensions will also depend on the `font-size` setting.
     #[clap(long, default_value_t = 1.0, value_parser)]
     scale_down: f32,
+    /// Font size of the ascii characters.  Defaults to 12.0.  Affects output quality.
+    /// This directly affects the scaling of the output resolution as we "expand" each pixel to fit
+    /// the Cascadia font to this size.  Note: this is not in "pixels" per-se, but will roughly scale
+    /// the output to a multiple of this.
+    #[clap(long, default_value_t = 12.0, value_parser)]
+    font_size: f32,
     /// Rate at which we sample from the pixel rows of the frames.  This affects how stretched the
     /// output ascii is vertically due to discrepancies in the width-to-height ratio of the
     /// Cascadia font, and the input/output media dimensions.
@@ -57,7 +64,7 @@ struct Cli {
     /// Output file path.  If omitted, output will be written to console.
     /// Supports most image formats, and .mp4 video outputs.
     /// Images will be resized to fit the ascii text.  Videos will honor the aspect ratio of the
-    /// input, but resolution will be scaled differently according to `scale-down` and `font-size`.
+    /// input, but resolution will be scaled differently approximately to `(height|width) / scale_down * font_size`.
     #[clap(short, long, value_parser)]
     output_file_path: Option<String>,
     /// Use the max_fps setting for video file outputs.
@@ -100,6 +107,7 @@ fn main() {
         config_builder
             .image_path(image_path)
             .scale_down(cli.scale_down)
+            .font_size(cli.font_size)
             .height_sample_scale(cli.height_sample_scale)
             .invert(cli.invert)
             .overwrite(cli.overwrite);
@@ -119,6 +127,7 @@ fn main() {
         config_builder
             .video_path(video_path)
             .scale_down(cli.scale_down)
+            .font_size(cli.font_size)
             .invert(cli.invert)
             .overwrite(cli.overwrite)
             .use_max_fps_for_output_video(cli.use_max_fps_for_output_video);

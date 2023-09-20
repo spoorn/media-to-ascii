@@ -23,6 +23,7 @@ use crate::util::{ascii_to_str, get_size_from_ascii, UnsafeMat};
 pub struct VideoConfig {
     video_path: String,
     scale_down: f32,
+    font_size: f32,
     height_sample_scale: f32,
     invert: bool,
     max_fps: u64,
@@ -37,6 +38,7 @@ impl Default for VideoConfig {
         VideoConfig {
             video_path: "".to_string(),
             scale_down: 1.0,
+            font_size: 12.0,
             height_sample_scale: MAGIC_HEIGHT_TO_WIDTH_RATIO,
             invert: false,
             max_fps: 10,
@@ -89,7 +91,7 @@ pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) ->
 
 #[inline]
 pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_writer: &mut VideoWriter, size: &Size) {
-    let frame = generate_ascii_image(ascii, size, config.invert);
+    let frame = generate_ascii_image(ascii, size, config.invert, config.font_size);
     //println!("image frame width: {}, height: {}", frame.width(), frame.height());
 
     // Create opencv CV_8UC3 frame
@@ -173,7 +175,7 @@ pub fn process_video(config: VideoConfig) {
 
             if i == 0 {
                 // Initialize VideoWriter for real
-                output_frame_size = get_size_from_ascii(&ascii, config.height_sample_scale);
+                output_frame_size = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
                 //println!("frame size: {:?}", output_frame_size);
                 let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
                 // TODO: allow any video output
