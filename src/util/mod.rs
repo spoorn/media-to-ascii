@@ -1,9 +1,50 @@
-use opencv::core::{Size, Size_};
+use image::{ImageBuffer, Rgb};
+use opencv::core::{Mat, Size, Size_};
+use std::cell::UnsafeCell;
+use std::ops::{Deref, DerefMut};
 
 use crate::util::constants::{FONT_HEIGHT, MAGIC_HEIGHT_TO_WIDTH_RATIO};
 
 pub mod constants;
 pub mod file_util;
+
+/// Wrapper around Mat that let's us bypass non-Sync since Mat uses *mut c_void ptr.  Tricks
+/// compiler into letting us use this across threads even though it's unsafe.  Allows for
+/// parallelization of some operations at very high performance.
+pub struct UnsafeMat(pub Mat);
+unsafe impl Sync for UnsafeMat {}
+impl Deref for UnsafeMat {
+    type Target = Mat;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for UnsafeMat {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+/// Wrapper around ImageBuffer that bypasses non-Sync.  Tricks compiler into letting us use this
+/// across threads even though it's unsafe.  Allows for parallelization of some operations at very
+/// high performance.
+pub struct UnsafeImageBuffer(pub UnsafeCell<Option<ImageBuffer<Rgb<u8>, Vec<u8>>>>);
+unsafe impl Sync for UnsafeImageBuffer {}
+impl Deref for UnsafeImageBuffer {
+    type Target = UnsafeCell<Option<ImageBuffer<Rgb<u8>, Vec<u8>>>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for UnsafeImageBuffer {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 #[inline]
 pub fn ascii_to_str(ascii: &[Vec<&str>]) -> String {

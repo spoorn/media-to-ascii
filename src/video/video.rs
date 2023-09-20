@@ -5,14 +5,17 @@ use std::time::{Duration, SystemTime};
 
 use derive_builder::Builder;
 use indicatif::ProgressBar;
-use opencv::core::{Mat, MatTraitConst, MatTraitManual, Scalar, Size, Vec3b, CV_8UC3};
+use opencv::core::{Mat, MatTraitConst, MatTraitManual, Size, Vec3b, CV_8UC3};
 use opencv::videoio;
 use opencv::videoio::{VideoCaptureTrait, VideoCaptureTraitConst, VideoWriter, VideoWriterTrait, CAP_ANY};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::image::generate_ascii_image;
-use crate::util::constants::{GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE};
+use crate::util::constants::{
+    DARK_BGR_SCALAR, GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE, WHITE_BGR_SCALAR,
+};
 use crate::util::file_util::{check_file_exists, check_valid_file};
-use crate::util::{ascii_to_str, get_size_from_ascii};
+use crate::util::{ascii_to_str, get_size_from_ascii, UnsafeMat};
 
 #[derive(Builder, Debug)]
 #[builder(default)]
@@ -49,35 +52,34 @@ impl Default for VideoConfig {
 ///
 /// References https://github.com/luketio/asciiframe/blob/main/src/converter.rs#L15.
 #[inline]
-pub fn convert_opencv_video_to_ascii(frame: &Mat, config: &VideoConfig) -> Vec<Vec<&'static str>> {
+pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) -> Vec<Vec<&'static str>> {
     let scale_down = config.scale_down;
     let height_sample_scale = config.height_sample_scale;
 
-    let width = frame.cols();
-    let height = frame.rows();
+    let width = frame.0.cols();
+    let height = frame.0.rows();
     // TODO: scaled dims
     let scaled_width = (width as f32 / scale_down) as usize;
     let scaled_height = ((height as f32 / scale_down) / height_sample_scale) as usize;
     let mut res = vec![vec![" "; scaled_width]; scaled_height];
 
     // Invert greyscale, for dark backgrounds
-    let greyscale_ramp: &Vec<&str> = if config.invert { &REVERSE_GREYSCALE_RAMP } else { &GREYSCALE_RAMP };
+    let greyscale_ramp: &[&str] = if config.invert { &REVERSE_GREYSCALE_RAMP } else { &GREYSCALE_RAMP };
 
-    for (y, row) in res.iter_mut().enumerate() {
-        for x in 0..scaled_width {
-            let pix: Vec3b = *frame
-                .at_2d::<Vec3b>(
-                    (y as f32 * scale_down * height_sample_scale) as i32,
-                    (x as f32 * scale_down) as i32,
-                )
+    // SAFETY: operates pixels independently
+    res.par_iter_mut().enumerate().for_each(|(y, row)| {
+        (0..scaled_width).for_each(|x| {
+            let pix: &Vec3b = frame
+                .0
+                .at_2d::<Vec3b>((y as f32 * scale_down * height_sample_scale) as i32, (x as f32 * scale_down) as i32)
                 .unwrap();
             let greyscale_value = RGB_TO_GREYSCALE.0 * pix[0] as f32
                 + RGB_TO_GREYSCALE.1 * pix[1] as f32
                 + RGB_TO_GREYSCALE.2 * pix[2] as f32;
             let index = (greyscale_value * (greyscale_ramp.len() - 1) as f32 / 255.0).ceil() as usize;
             row[x] = greyscale_ramp[index];
-        }
-    }
+        })
+    });
 
     res
 }
@@ -88,16 +90,11 @@ pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_wri
 
     // Create opencv CV_8UC3 frame
     // opencv uses BGR format
-    let bgr_background_color =
-        if config.invert { Scalar::from((255.0, 255.0, 255.0)) } else { Scalar::from((54.0, 42.0, 40.0)) };
+    let bgr_background_color = if config.invert { WHITE_BGR_SCALAR } else { DARK_BGR_SCALAR };
 
-    let mut opencv_frame = Mat::new_rows_cols_with_default(
-        frame.height() as i32,
-        frame.width() as i32,
-        CV_8UC3,
-        bgr_background_color,
-    )
-    .unwrap();
+    let mut opencv_frame =
+        Mat::new_rows_cols_with_default(frame.height() as i32, frame.width() as i32, CV_8UC3, bgr_background_color)
+            .unwrap();
 
     // Writing per row is much faster than reading and writing each pixel
     frame.enumerate_rows().for_each(|(row, x)| {
@@ -143,29 +140,26 @@ pub fn process_video(config: VideoConfig) {
     let should_rotate = config.rotate > -1 && config.rotate < 3;
 
     if output_video_file {
-        println!(
-            "Encoding video from {} to ascii video at {}",
-            video_path,
-            output_video_path.unwrap()
-        );
+        println!("Encoding video from {} to ascii video at {}", video_path, output_video_path.unwrap());
     }
 
     let progressbar = ProgressBar::new(num_frames);
 
     for i in 0..num_frames {
         let start = SystemTime::now();
-        let mut frame = Mat::default();
+        let mut frame = UnsafeMat(Mat::default());
 
         // CV_8UC3
         // TODO: error handling
-        let read = capture.read(&mut frame).expect("Could not read frame of video");
+        let read = capture.read(&mut frame.0).expect("Could not read frame of video");
         if !read {
+            eprintln!("Error reading frame {} from input video.  Skipping frame and continuing...", i);
             continue;
         }
 
         // Rotate
         if should_rotate {
-            opencv::core::rotate(&frame.clone(), &mut frame, config.rotate).unwrap();
+            opencv::core::rotate(&frame.clone(), &mut frame.0, config.rotate).unwrap();
         }
 
         let ascii = convert_opencv_video_to_ascii(&frame, &config);
@@ -177,6 +171,7 @@ pub fn process_video(config: VideoConfig) {
                 // Initialize VideoWriter for real
                 output_frame_size = get_size_from_ascii(&ascii);
                 let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
+                // TODO: allow any video output
                 video_writer = VideoWriter::new(
                     output_video_path.unwrap().as_str(),
                     VideoWriter::fourcc('m', 'p', '4', 'v').unwrap(),

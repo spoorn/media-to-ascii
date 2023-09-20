@@ -29,7 +29,7 @@ struct Cli {
     #[clap(long, default_value_t = 1.0, value_parser)]
     scale_down: f32,
     /// Rate at which we sample from the pixel rows of the frames.  This affects how stretched the
-    /// output ascii is in the vertical or y-axis.
+    /// output ascii is in the vertical or y-axis.  This is only used for images!
     #[clap(long, default_value_t = 2.4, value_parser)]
     height_sample_scale: f32,
     /// Invert ascii greyscale ramp (For light backgrounds.  Default OFF is for dark backgrounds.)
