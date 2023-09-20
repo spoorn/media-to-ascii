@@ -37,8 +37,7 @@ impl Default for VideoConfig {
         VideoConfig {
             video_path: "".to_string(),
             scale_down: 1.0,
-            // 2.4 seems to be a good default
-            height_sample_scale: 2.4,
+            height_sample_scale: MAGIC_HEIGHT_TO_WIDTH_RATIO,
             invert: false,
             max_fps: 10,
             output_video_path: None,
@@ -55,7 +54,7 @@ impl Default for VideoConfig {
 #[inline]
 pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) -> Vec<Vec<&'static str>> {
     let scale_down = config.scale_down;
-    let height_sample_scale = MAGIC_HEIGHT_TO_WIDTH_RATIO;
+    let height_sample_scale = config.height_sample_scale;
 
     let width = frame.cols();
     let height = frame.rows();
@@ -174,7 +173,7 @@ pub fn process_video(config: VideoConfig) {
 
             if i == 0 {
                 // Initialize VideoWriter for real
-                output_frame_size = get_size_from_ascii(&ascii);
+                output_frame_size = get_size_from_ascii(&ascii, config.height_sample_scale);
                 //println!("frame size: {:?}", output_frame_size);
                 let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
                 // TODO: allow any video output

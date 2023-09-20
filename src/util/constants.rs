@@ -22,6 +22,7 @@ pub static DARK_BGR_SCALAR: Scalar = Scalar::new(54.0, 42.0, 40.0, 0.0);
 
 /// When creating the output ascii video, for Cascadia font, this is a magic height to width ratio
 /// for the video dimensions so the text fits to the frames' ends
+/// See https://github.com/spoorn/media-to-ascii/issues/2
 pub const MAGIC_HEIGHT_TO_WIDTH_RATIO: f32 = 2.046;
 pub static CASCADIA_FONT: Lazy<Font<'static>> = Lazy::new(|| {
     let font_data = include_bytes!("fonts/Cascadia.ttf");

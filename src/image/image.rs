@@ -7,8 +7,8 @@ use opencv::core::Size;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use crate::util::constants::{
-    BLACK_RGB, CASCADIA_FONT, DARK_RGB, FONT_HEIGHT, FONT_SCALE, GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP,
-    RGB_TO_GREYSCALE, WHITE_RGB,
+    BLACK_RGB, CASCADIA_FONT, DARK_RGB, FONT_HEIGHT, FONT_SCALE, GREYSCALE_RAMP, MAGIC_HEIGHT_TO_WIDTH_RATIO,
+    REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE, WHITE_RGB,
 };
 use crate::util::file_util::{check_file_exists, check_valid_file, write_to_file};
 use crate::util::{get_size_from_ascii, print_ascii, UnsafeImageBuffer};
@@ -30,8 +30,7 @@ impl Default for ImageConfig {
         ImageConfig {
             image_path: "".to_string(),
             scale_down: 1.0,
-            // 2.4 seems to be a good default
-            height_sample_scale: 2.4,
+            height_sample_scale: MAGIC_HEIGHT_TO_WIDTH_RATIO,
             invert: false,
             output_file_path: None,
             output_image_path: None,
@@ -128,7 +127,13 @@ pub fn process_image(config: ImageConfig) {
     }
 
     if let Some(file) = config.output_image_path.as_ref() {
-        write_to_image(file, config.overwrite, &ascii, &get_size_from_ascii(&ascii), config.invert);
+        write_to_image(
+            file,
+            config.overwrite,
+            &ascii,
+            &get_size_from_ascii(&ascii, config.height_sample_scale),
+            config.invert,
+        );
     }
 
     if config.output_file_path.is_none() && config.output_image_path.is_none() {

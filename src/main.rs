@@ -1,10 +1,11 @@
 use clap::{ArgGroup, Parser};
 
-use crate::image::{ImageConfigBuilder, process_image};
+use crate::image::{process_image, ImageConfigBuilder};
+use crate::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;
 use crate::video::{process_video, VideoConfigBuilder};
 
-mod util;
 mod image;
+mod util;
 mod video;
 
 /// Converts media (images and videos) to ascii, and displays output either as an output media file
@@ -29,8 +30,14 @@ struct Cli {
     #[clap(long, default_value_t = 1.0, value_parser)]
     scale_down: f32,
     /// Rate at which we sample from the pixel rows of the frames.  This affects how stretched the
-    /// output ascii is in the vertical or y-axis.  This is only used for images!
-    #[clap(long, default_value_t = 2.4, value_parser)]
+    /// output ascii is vertically due to discrepancies in the width-to-height ratio of the
+    /// Cascadia font, and the input/output media dimensions.
+    /// This essentially lets you shrink/squeeze the ascii text horizontally, without affecting
+    /// output frame resolution.
+    /// If you see text overflowing to the right of the output frame(s), or cut off short, you can
+    /// try tuning this setting.  Larger values stretch the output. The default magic number is 2.046.
+    /// See https://github.com/spoorn/media-to-ascii/issues/2 for in-depth details.
+    #[clap(long, default_value_t = MAGIC_HEIGHT_TO_WIDTH_RATIO, value_parser)]
     height_sample_scale: f32,
     /// Invert ascii greyscale ramp (For light backgrounds.  Default OFF is for dark backgrounds.)
     #[clap(short, long, action)]
@@ -49,6 +56,8 @@ struct Cli {
     as_text: bool,
     /// Output file path.  If omitted, output will be written to console.
     /// Supports most image formats, and .mp4 video outputs.
+    /// Images will be resized to fit the ascii text.  Videos will honor the aspect ratio of the
+    /// input, but resolution will be scaled differently according to `scale-down` and `font-size`.
     #[clap(short, long, value_parser)]
     output_file_path: Option<String>,
     /// Use the max_fps setting for video file outputs.
