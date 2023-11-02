@@ -303,5 +303,7 @@ cargo run --release
 
 1. If you're trying to update Ubuntu on WSL2, you may run into silent failures during the upgrade
     - See https://askubuntu.com/questions/1340153/how-to-upgrade-ubuntu-18-04-to-20-04-in-wsl-when-wsl-export-fails
-3. `error while loading shared libraries: libopencv_videoio.so.4.2: cannot open shared object file: No such file or directory`
+2. `error while loading shared libraries: libopencv_videoio.so.4.2: cannot open shared object file: No such file or directory`
     - Make sure you have OpenCV 4.x installed
+3. `Picture size 12668x22512 is invalid ... global cap_ffmpeg_impl.hpp:3066 open VIDEOIO/FFMPEG: Failed to initialize VideoWriter` or `dimensions too large for MPEG-4`
+    - mediatoascii scales up the image when writing ascii frames and there is a frame size limit to mpeg4.  Try setting the `--scale-down` setting to scale down the output resolution.  See https://github.com/spoorn/media-to-ascii/issues/2 for why the image has to be scaled up
