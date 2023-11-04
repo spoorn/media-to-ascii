@@ -175,6 +175,10 @@ jobs:
           $env:OPENCV_LINK_LIBS="opencv_imgproc,opencv_core,opencv_videoio"
           $env:OPENCV_LINK_PATHS="C:/opt/opencv/lib,C:/opt/opencv/lib/opencv4/3rdparty"
           $env:OPENCV_INCLUDE_PATHS="C:/opt/opencv/include/opencv4"
+          ls C:/opt/opencv/include
+          ls C:/opt/opencv/include/opencv4
+          ls C:/opt/opencv/lib
+          ls C:/opt/opencv/lib/opencv4
           cargo build --release
         
       # Ready artifacts for upload
