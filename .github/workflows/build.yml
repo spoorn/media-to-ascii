@@ -179,12 +179,12 @@ jobs:
           ls "C:/Program Files"
           ls D:/
           ls D:/a/media-to-ascii/media-to-ascii
-          ls C:/opt
-          ls C:/opt/opencv
-          ls C:/opt/opencv/include
-          ls C:/opt/opencv/include/opencv4
-          ls C:/opt/opencv/lib
-          ls C:/opt/opencv/lib/opencv4
+          ls D:/opt
+          ls D:/opt/opencv
+          ls D:/opt/opencv/include
+          ls D:/opt/opencv/include/opencv4
+          ls D:/opt/opencv/lib
+          ls D:/opt/opencv/lib/opencv4
           cargo build --release
         
       # Ready artifacts for upload
