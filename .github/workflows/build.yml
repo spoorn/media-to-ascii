@@ -132,9 +132,28 @@ jobs:
         uses: crazy-max/ghaction-chocolatey@v3.0.0
         with:
           # Arguments to pass to Chocolatey
-          args: install llvm opencv 
+          args: install llvm make
           # Docker image to use
           #image: # optional, default is ghcr.io/crazy-max/ghaction-chocolatey
+
+      # from https://github.com/twistedfall/opencv-rust/issues/364
+      - name: Install OpenCV static lib
+        run: |
+          wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.8.1.zip
+          wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/refs/tags/4.8.1.zip
+          unzip opencv.zip && rm opencv.zip
+          unzip opencv_contrib.zip && rm opencv_contrib.zip
+          mkdir -p build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO \
+            -DCMAKE_INSTALL_PREFIX=C:/opt/opencv -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF \
+            -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_java=OFF \
+            -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-4.8.1/modules \
+            ../opencv-4.8.1
+          make -j8 && make install
+          $env:OPENCV_LINK_LIBS="opencv_imgproc,opencv_core,opencv_videoio"
+          $env:OPENCV_LINK_PATHS=C:/opt/opencv/lib,C:/opt/opencv/lib/opencv4/3rdparty
+          $env:OPENCV_INCLUDE_PATHS=C:/opt/opencv/include/opencv4
+          cd -
             
       # - name: Install Clang
       #   # You may pin to the exact commit or the version.
@@ -154,7 +173,8 @@ jobs:
         
       # Build
       - name: Build
-        run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
+        #run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
+        run: cargo build --release
         
       # Ready artifacts for upload
       - name: Prepare Artifacts
