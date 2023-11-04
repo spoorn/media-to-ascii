@@ -167,14 +167,14 @@ jobs:
       # - name: OpenCV Dynamic Link Env Vars
       #   run: |
           
-        
+
+      # $env:OPENCV_LINK_LIBS="opencv_imgproc,opencv_core,opencv_videoio"
+      # $env:OPENCV_LINK_PATHS="C:/opt/opencv/lib,C:/opt/opencv/lib/opencv4/3rdparty"
+      # $env:OPENCV_INCLUDE_PATHS="C:/opt/opencv/include/opencv4"
       # Build
       - name: Build
         #run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
         run: |
-          $env:OPENCV_LINK_LIBS="opencv_imgproc,opencv_core,opencv_videoio"
-          $env:OPENCV_LINK_PATHS="C:/opt/opencv/lib,C:/opt/opencv/lib/opencv4/3rdparty"
-          $env:OPENCV_INCLUDE_PATHS="C:/opt/opencv/include/opencv4"
           ls C:/opt/opencv/include
           ls C:/opt/opencv/include/opencv4
           ls C:/opt/opencv/lib
