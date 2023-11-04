@@ -179,6 +179,7 @@ jobs:
           ls "C:/Program Files"
           ls D:/
           ls D:/a/media-to-ascii/media-to-ascii
+          ls D:/a/media-to-ascii/media-to-ascii/build
           ls D:/opt
           ls D:/opt/opencv
           ls D:/opt/opencv/include
