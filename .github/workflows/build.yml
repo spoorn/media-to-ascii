@@ -148,6 +148,7 @@ jobs:
           unzip opencv_contrib.zip && rm opencv_contrib.zip
           mkdir -p build && cd build
           mkdir D:/opt
+          mkdir D:/opt/opencv
           cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO -DCMAKE_INSTALL_PREFIX="D:/opt/opencv" -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH="../opencv_contrib-4.8.1/modules" ../opencv-4.8.1
           msbuild OpenCV.sln /m
           cd -
@@ -177,6 +178,8 @@ jobs:
           ls C:/
           ls "C:/Program Files"
           ls D:/
+          ls D:/opt
+          ls D:/opt/opencv
           ls D:/a/media-to-ascii/media-to-ascii
           ls D:/a/media-to-ascii/media-to-ascii/build
           ls D:/a/media-to-ascii/media-to-ascii/build/lib
