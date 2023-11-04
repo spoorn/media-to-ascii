@@ -151,7 +151,7 @@ jobs:
             ../opencv-4.8.1
           make -j8 && make install
           $env:OPENCV_LINK_LIBS="opencv_imgproc,opencv_core,opencv_videoio"
-          $env:OPENCV_LINK_PATHS=C:/opt/opencv/lib,C:/opt/opencv/lib/opencv4/3rdparty
+          $env:OPENCV_LINK_PATHS="C:/opt/opencv/lib,C:/opt/opencv/lib/opencv4/3rdparty"
           $env:OPENCV_INCLUDE_PATHS=C:/opt/opencv/include/opencv4
           cd -
             
