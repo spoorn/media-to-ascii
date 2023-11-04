@@ -167,25 +167,20 @@ jobs:
       # - name: OpenCV Dynamic Link Env Vars
       #   run: |
           
-
-      # $env:OPENCV_LINK_LIBS="opencv_imgproc,opencv_core,opencv_videoio"
-      # $env:OPENCV_LINK_PATHS="C:/opt/opencv/lib,C:/opt/opencv/lib/opencv4/3rdparty"
-      # $env:OPENCV_INCLUDE_PATHS="C:/opt/opencv/include/opencv4"
       # Build
       - name: Build
         #run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
         run: |
+          $env:OPENCV_LINK_LIBS="opencv_imgproc,opencv_core,opencv_videoio"
+          $env:OPENCV_LINK_PATHS="./lib,./lib/opencv2/3rdparty"
+          $env:OPENCV_INCLUDE_PATHS="./include/opencv2"
           ls C:/
           ls "C:/Program Files"
           ls D:/
           ls D:/a/media-to-ascii/media-to-ascii
           ls D:/a/media-to-ascii/media-to-ascii/build
-          ls D:/opt
-          ls D:/opt/opencv
-          ls D:/opt/opencv/include
-          ls D:/opt/opencv/include/opencv4
-          ls D:/opt/opencv/lib
-          ls D:/opt/opencv/lib/opencv4
+          ls D:/a/media-to-ascii/media-to-ascii/build/lib
+          ls D:/a/media-to-ascii/media-to-ascii/build/include
           cargo build --release
         
       # Ready artifacts for upload
