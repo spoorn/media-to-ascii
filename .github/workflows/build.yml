@@ -132,7 +132,7 @@ jobs:
         uses: crazy-max/ghaction-chocolatey@v3.0.0
         with:
           # Arguments to pass to Chocolatey
-          args: install llvm make
+          args: install llvm make wget
           # Docker image to use
           #image: # optional, default is ghcr.io/crazy-max/ghaction-chocolatey
 
