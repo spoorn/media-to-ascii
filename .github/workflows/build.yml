@@ -167,7 +167,8 @@ jobs:
       # Set opencv dynamic link env vars
       # - name: OpenCV Dynamic Link Env Vars
       #   run: |
-          
+
+      # OPENCV_MSVC_CRT is for CRT library to be static or dynamic: https://github.com/twistedfall/opencv-rust/blob/master/README.md#troubleshooting
       # Build
       - name: Build
         #run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
@@ -175,6 +176,7 @@ jobs:
           $env:OPENCV_LINK_LIBS="opencv_imgproc481,opencv_core481,opencv_videoio481"
           $env:OPENCV_LINK_PATHS="D:/opt/opencv/x64/vc17/staticlib"
           $env:OPENCV_INCLUDE_PATHS="D:/opt/opencv/include"
+          $env:OPENCV_MSVC_CRT="static"
           ls -R D:/opt
           cargo build --release
         
