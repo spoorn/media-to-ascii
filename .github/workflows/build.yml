@@ -139,7 +139,6 @@ jobs:
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3.1
 
-      # msbuild OpenCV.sln /m
       # from https://github.com/twistedfall/opencv-rust/issues/364
       - name: Install OpenCV static lib
         run: |
@@ -148,9 +147,8 @@ jobs:
           unzip opencv.zip && rm opencv.zip
           unzip opencv_contrib.zip && rm opencv_contrib.zip
           mkdir -p build && cd build
-          mkdir D:/opt
-          mkdir D:/opt/opencv
           cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO -DCMAKE_INSTALL_PREFIX="D:/opt/opencv" -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH="../opencv_contrib-4.8.1/modules" ../opencv-4.8.1
+          msbuild OpenCV.sln /m
           cd -
             
       # - name: Install Clang
@@ -173,18 +171,10 @@ jobs:
         #run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
         run: |
           $env:OPENCV_LINK_LIBS="opencv_imgproc,opencv_core,opencv_videoio"
-          $env:OPENCV_LINK_PATHS="./lib,./lib/opencv2/3rdparty"
-          $env:OPENCV_INCLUDE_PATHS="./include/opencv2"
-          ls C:/
-          ls "C:/Program Files"
-          ls D:/
-          ls D:/opt
-          ls D:/opt/opencv
-          ls D:/a/media-to-ascii/media-to-ascii
-          ls D:/a/media-to-ascii/media-to-ascii/build
-          ls D:/a/media-to-ascii/media-to-ascii/build/lib
-          ls D:/a/media-to-ascii/media-to-ascii/build/include
-          ls D:/a/media-to-ascii/media-to-ascii/build/opencv2
+          $env:OPENCV_LINK_PATHS="./x64/vc16/lib,./x64/vc16/lib/opencv2/3rdparty"
+          $env:OPENCV_INCLUDE_PATHS="./include"
+          ls -R D:/a/media-to-ascii/media-to-ascii/build/x64
+          ls -R .
           cargo build --release
         
       # Ready artifacts for upload
