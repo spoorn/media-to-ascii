@@ -132,16 +132,19 @@ jobs:
         uses: crazy-max/ghaction-chocolatey@v3.0.0
         with:
           # Arguments to pass to Chocolatey
-          args: install llvm make wget
+          # don't install opencv here as we build the staticlib below
+          args: install llvm wget
           # Docker image to use
           #image: # optional, default is ghcr.io/crazy-max/ghaction-chocolatey
 
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.3.1
+      # msbuild as our underlying builder
+      #- name: Add msbuild to PATH
+      #  uses: microsoft/setup-msbuild@v1.3.1
 
-      # msbuild OpenCV.sln /m
+      # Note: in order to set config profile to Release and use a prefix path, we have to separate cmake steps for building/installing.  CMake nuances...
+      # Pull opencv source, unzip, configure cmake, build, and install
       # Disable image formats like jpeg, png, tiff, as we use rust image crate instead.  See https://docs.opencv.org/4.x/db/d05/tutorial_config_reference.html
-      # from https://github.com/twistedfall/opencv-rust/issues/364
+      # Inspired from https://github.com/twistedfall/opencv-rust/issues/364
       - name: Install OpenCV static lib
         run: |
           wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.8.1.zip
@@ -152,7 +155,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO -DCMAKE_INSTALL_PREFIX="D:/opt/opencv" -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DWITH_PNG=OFF -DWITH_JPEG=OFF -DWITH_TIFF=OFF -DWITH_WEBP=OFF -DWITH_OPENJPEG=OFF -DWITH_JASPER=OFF -DWITH_OPENEXR=OFF -DWITH_V4L=OFF  -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH="../opencv_contrib-4.8.1/modules" ../opencv-4.8.1
           cmake --build . --target install --config Release --parallel 8
           cmake --install . --prefix D:/opt/opencv
-          cd -
+          cd ..
             
       # - name: Install Clang
       #   # You may pin to the exact commit or the version.
@@ -172,7 +175,7 @@ jobs:
       # OPENCV_LINK_LIBS includes both opencv modules and 3rdparty.  Note: 3rdparty libs may be named differently on different platforms
       # OPENCV_LINK_PATHS points to the installed staticlib folder after cmake install
       # OPENCV_INCLUDE_PATHS points to installed include folder after cmake install
-      # OPENCV_MSVC_CRT is for CRT library to be static or dynamic: https://github.com/twistedfall/opencv-rust/blob/master/README.md#troubleshooting
+      # OPENCV_MSVC_CRT is for CRT library to be static or dynamic using windows MSVC: https://github.com/twistedfall/opencv-rust/blob/master/README.md#troubleshooting
       # Build
       - name: Build
         #run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
@@ -181,7 +184,6 @@ jobs:
           $env:OPENCV_LINK_PATHS="D:/opt/opencv/x64/vc17/staticlib"
           $env:OPENCV_INCLUDE_PATHS="D:/opt/opencv/include"
           $env:OPENCV_MSVC_CRT="static"
-          ls -R D:/opt
           cargo build --release
         
       # Ready artifacts for upload
