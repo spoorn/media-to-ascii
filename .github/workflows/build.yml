@@ -32,12 +32,32 @@ jobs:
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
       # Install opencv
-      - name: Install opencv
-        run: sudo apt install libopencv-dev clang libclang-dev
+      #- name: Install opencv
+      #  run: sudo apt install libopencv-dev clang libclang-dev
+
+      # Pull opencv source, unzip, configure cmake, build, and install
+      # Disable image formats like jpeg, png, tiff, as we use rust image crate instead.  See https://docs.opencv.org/4.x/db/d05/tutorial_config_reference.html
+      # Inspired from https://github.com/twistedfall/opencv-rust/issues/364
+      - name: Install OpenCV static lib
+        run: |
+          wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.8.1.zip
+          wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/refs/tags/4.8.1.zip
+          unzip opencv.zip && rm opencv.zip
+          unzip opencv_contrib.zip && rm opencv_contrib.zip
+          mkdir -p build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO -DCMAKE_INSTALL_PREFIX="/opt/opencv" -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DWITH_PNG=OFF -DWITH_JPEG=OFF -DWITH_TIFF=OFF -DWITH_WEBP=OFF -DWITH_OPENJPEG=OFF -DWITH_JASPER=OFF -DWITH_OPENEXR=OFF -DWITH_V4L=OFF  -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH="../opencv_contrib-4.8.1/modules" ../opencv-4.8.1
+          cmake --build . --target install --config Release --parallel 8
+          cmake --install . --prefix /opt/opencv
+          cd ..
         
       # Build
       - name: Build
-        run: cargo build --release
+        run: |
+          $env:OPENCV_LINK_LIBS="opencv_core481,opencv_videoio481,opencv_imgcodecs481,opencv_imgproc481,ippiw,ittnotify,ippicvmt,zlib"
+          $env:OPENCV_LINK_PATHS="/opt/opencv/x64/vc17/staticlib"
+          $env:OPENCV_INCLUDE_PATHS="/opt/opencv/include"
+          ls -R /opt
+          cargo build --release
         
       # Ready artifacts for upload
       - name: Prepare Artifacts
@@ -142,6 +162,7 @@ jobs:
       #  uses: microsoft/setup-msbuild@v1.3.1
 
       # Note: in order to set config profile to Release and use a prefix path, we have to separate cmake steps for building/installing.  CMake nuances...
+      #    See https://stackoverflow.com/questions/19024259/how-to-change-the-build-type-to-release-mode-in-cmake, https://stackoverflow.com/questions/50028570/is-it-possible-to-build-cmake-projects-directly-using-msbuildtools, https://cmake.org/cmake/help/latest/variable/CMAKE_INSTALL_PREFIX.html
       # Pull opencv source, unzip, configure cmake, build, and install
       # Disable image formats like jpeg, png, tiff, as we use rust image crate instead.  See https://docs.opencv.org/4.x/db/d05/tutorial_config_reference.html
       # Inspired from https://github.com/twistedfall/opencv-rust/issues/364
