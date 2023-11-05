@@ -176,7 +176,7 @@ jobs:
       - name: Build
         #run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
         run: |
-          $env:OPENCV_LINK_LIBS="opencv_core481,opencv_videoio481,opencv_imageproc481,opencv_objdetect481,ippiw,ittnotify,ippicvmt,zlib"
+          $env:OPENCV_LINK_LIBS="opencv_core481,opencv_videoio481,opencv_imgproc481,ippiw,ittnotify,ippicvmt,zlib"
           $env:OPENCV_LINK_PATHS="D:/opt/opencv/x64/vc17/staticlib"
           $env:OPENCV_INCLUDE_PATHS="D:/opt/opencv/include"
           $env:OPENCV_MSVC_CRT="static"
