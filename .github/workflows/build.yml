@@ -53,9 +53,9 @@ jobs:
       # Build
       - name: Build
         run: |
-          $env:OPENCV_LINK_LIBS="opencv_core481,opencv_videoio481,opencv_imgcodecs481,opencv_imgproc481,ippiw,ittnotify,ippicvmt,zlib"
-          $env:OPENCV_LINK_PATHS="/opt/opencv/x64/vc17/staticlib"
-          $env:OPENCV_INCLUDE_PATHS="/opt/opencv/include"
+          export OPENCV_LINK_LIBS="opencv_core481,opencv_videoio481,opencv_imgcodecs481,opencv_imgproc481,ippiw,ittnotify,ippicvmt,zlib"
+          export OPENCV_LINK_PATHS="/opt/opencv/x64/vc17/staticlib"
+          export OPENCV_INCLUDE_PATHS="/opt/opencv/include"
           ls -R /opt
           cargo build --release
         
