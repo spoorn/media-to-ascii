@@ -139,6 +139,7 @@ jobs:
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3.1
 
+      # msbuild OpenCV.sln /m
       # from https://github.com/twistedfall/opencv-rust/issues/364
       - name: Install OpenCV static lib
         run: |
@@ -150,7 +151,6 @@ jobs:
           mkdir D:/opt
           mkdir D:/opt/opencv
           cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO -DCMAKE_INSTALL_PREFIX="D:/opt/opencv" -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH="../opencv_contrib-4.8.1/modules" ../opencv-4.8.1
-          msbuild OpenCV.sln /m
           cd -
             
       # - name: Install Clang
@@ -184,6 +184,7 @@ jobs:
           ls D:/a/media-to-ascii/media-to-ascii/build
           ls D:/a/media-to-ascii/media-to-ascii/build/lib
           ls D:/a/media-to-ascii/media-to-ascii/build/include
+          ls D:/a/media-to-ascii/media-to-ascii/build/opencv2
           cargo build --release
         
       # Ready artifacts for upload
