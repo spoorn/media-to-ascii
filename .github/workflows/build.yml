@@ -173,11 +173,9 @@ jobs:
         #run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
         run: |
           $env:OPENCV_LINK_LIBS="opencv_imgproc,opencv_core,opencv_videoio"
-          $env:OPENCV_LINK_PATHS="D:/opt/env/lib,D:/opt/env/lib/opencv2/3rdparty"
+          $env:OPENCV_LINK_PATHS="D:/opt/env/vc17/staticlib"
           $env:OPENCV_INCLUDE_PATHS="D:/opt/env/include"
           ls -R D:/opt
-          ls -R D:/a/media-to-ascii/media-to-ascii/build/x64
-          ls -R .
           cargo build --release
         
       # Ready artifacts for upload
