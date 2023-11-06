@@ -56,7 +56,7 @@ jobs:
       # Build
       - name: Build
         run: |
-          export OPENCV_LINK_LIBS="opencv_core,opencv_videoio,opencv_imgcodecs,opencv_imgproc,liblibippiw,liblibittnotify,liblibippicv,zlib"
+          export OPENCV_LINK_LIBS="opencv_core,opencv_videoio,opencv_imgcodecs,opencv_imgproc,libippiw,libittnotify,libippicv,zlib"
           export OPENCV_LINK_PATHS=/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu
           export OPENCV_INCLUDE_PATHS=/opt/opencv/include,/opt/opencv/include/opencv4
           sudo ln -s /usr/lib/llvm-15/lib/libclang.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
@@ -130,10 +130,12 @@ jobs:
       - name: Build
         shell: /usr/local/bin/bash {0}
         run: |
-          export OPENCV_LINK_LIBS=opencv_core,opencv_videoio,opencv_imgcodecs,opencv_imgproc,libippiw,libittnotify,libippicv,zlib
-          export OPENCV_LINK_PATHS=/usr/local/lib,/usr/local/lib/opencv4/3rdparty
+          clang_dir="$(clang --print-search-dirs | awk -F= '/^libraries: =/ { print $2 }')"
+          export OPENCV_LINK_LIBS=opencv_core,opencv_videoio,opencv_imgcodecs,opencv_imgproc,libippiw,libittnotify,libippicv,zlib,OpenCL.framework,Cocoa.framework,Accelerate.framework,AVFoundation.framework,CoreGraphics.framework,CoreMedia.framework,CoreVideo.framework,QuartzCore.framework,clang_rt.osx
+          export OPENCV_LINK_PATHS=/usr/local/lib,/usr/local/lib/opencv4/3rdparty,$clang_dir/lib/darwin
           export OPENCV_INCLUDE_PATHS=/usr/local/include,/usr/local/include/opencv4
           ls -R /usr/local
+          ls -R $clang_dir/lib
           cargo build --release
         
       # Ready artifacts for upload
