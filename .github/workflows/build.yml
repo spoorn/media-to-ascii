@@ -51,12 +51,14 @@ jobs:
           cd ..
 
       # libclang files are in /usr/lib/llvm-##/lib.  We symlink it to one of the opencv_link_paths
+      # OpenCV-rust looks for "opencv2/core/version.hpp" for the OpenCV version: https://github.com/twistedfall/opencv-rust/issues/368
+      #  which is under /<install-prefix>/include/opencv4 for linux
       # Build
       - name: Build
         run: |
-          export OPENCV_LINK_LIBS="opencv_videoio,opencv_imgproc,opencv_imgcodecs,opencv_core,liblibippiw,liblibittnotify,liblibippicv,zlib"
+          export OPENCV_LINK_LIBS="opencv_core,opencv_videoio,opencv_imgcodecs,opencv_imgproc,liblibippiw,liblibittnotify,liblibippicv,zlib"
           export OPENCV_LINK_PATHS=/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu
-          export OPENCV_INCLUDE_PATHS=/opt/opencv/include
+          export OPENCV_INCLUDE_PATHS=/opt/opencv/include,/opt/opencv/include/opencv4
           sudo ln -s /usr/lib/llvm-15/lib/libclang.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
           ls -R /opt/opencv
           ls -R /usr/lib
@@ -121,15 +123,16 @@ jobs:
           cmake --build . --target install --config Release --parallel 8
           cmake --install . --prefix /usr/local
           cd ..
-        
+
+      # OpenCV-rust looks for "opencv2/core/version.hpp" for the OpenCV version: https://github.com/twistedfall/opencv-rust/issues/368
+      #  which is under /<install-prefix>/include/opencv4 for macOS
       # Build
       - name: Build
         shell: /usr/local/bin/bash {0}
         run: |
-          export OPENCV_LINK_LIBS=opencv_core.a,libopencv_core.a,liblibopencv_core.a,opencv_core,libopencv_core,liblibopencv_core,liblibopencv_videoio,liblibopencv_imgcodecs,liblibopencv_imgproc,liblibippiw,liblibittnotify,liblibippicv
+          export OPENCV_LINK_LIBS=opencv_core,opencv_videoio,opencv_imgcodecs,opencv_imgproc,libippiw,libittnotify,libippicv,zlib
           export OPENCV_LINK_PATHS=/usr/local/lib,/usr/local/lib/opencv4/3rdparty
-          export OPENCV_INCLUDE_PATHS=/usr/local/include
-          export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+          export OPENCV_INCLUDE_PATHS=/usr/local/include,/usr/local/include/opencv4
           ls -R /usr/local
           cargo build --release
         
