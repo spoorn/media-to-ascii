@@ -647,7 +647,7 @@ dependencies = [
 
 [[package]]
 name = "mediatoascii"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "clap",
  "derive_builder",
