@@ -50,12 +50,12 @@ jobs:
           cmake --install . --prefix /opt/opencv
           cd ..
 
-      # libclang is in /usr/lib/x86_64-linux-gnu
+      # libclang files are in /usr/lib/llvm-##/lib
       # Build
       - name: Build
         run: |
           export OPENCV_LINK_LIBS="libopencv_core,libopencv_videoio,libopencv_imgcodecs,libopencv_imgproc,libippiw,libittnotify,libippicv"
-          export OPENCV_LINK_PATHS="/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu"
+          export OPENCV_LINK_PATHS="/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu,/usr/lib/llvm-15/lib"
           export OPENCV_INCLUDE_PATHS="/opt/opencv/include"
           ls -R /opt/opencv
           ls -R /usr/lib
