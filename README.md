@@ -1,6 +1,6 @@
 # Media-To-Ascii
 CLI and utilities for converting media files (images/videos) to ascii outputs (output media file or print to console).  
-Supports most standard image formats, and some video formats.
+Supports most standard image formats and video formats (depends on OpenCV).
 
 Only output format for videos is `.mp4` at the moment
 
@@ -83,6 +83,7 @@ mediatoascii --video-path <FILE_PATH>
 mediatoascii --video-path <FILE_PATH> -o ascii.mp4
 
 # Scale down the video by 2x so file size is smaller in storage and resolution
+# For large videos, or if you see some alignment issues, please see the `--help` menu, notably settings `--scale-down`, `--font-size`, and `--height-sample-scale`
 mediatoascii --video-path <FILE_PATH> -o ascii.mp4 --scale-down 2.0
 ```
 
@@ -104,67 +105,67 @@ mediatoascii --image-path <FILE_PATH> -o ascii.txt --as-text
 $ mediatoascii --help
 mediatoascii 0.1.0
 spoorn
-CLI and utilities for converting media files (images/videos) to ascii outputs (output media file or
-print to console).
+CLI and utilities for converting media files (images/videos) to ascii outputs (output media file or print to console).  
 Supports most standard image formats, and video formats.
 
-USAGE:
-    mediatoascii [OPTIONS] <--image-path <IMAGE_PATH>|--video-path <VIDEO_PATH>>
 
-OPTIONS:
-        --image-path <IMAGE_PATH>
-            Input Image file.  One of image_path, or video_path must be populated
+Usage: mediatoascii.exe [OPTIONS] <--image-path <IMAGE_PATH>|--video-path <VIDEO_PATH>>
 
-        --video-path <VIDEO_PATH>
-            Input Video file.  One of image_path, or video_path must be populated
-
-        --scale-down <SCALE_DOWN>
-            Multiplier to scale down input dimensions by when converting to ASCII.  For large
-            frames, recommended to scale down more so output file size is more reasonable [default:
-            1]
-
-        --height-sample-scale <HEIGHT_SAMPLE_SCALE>
-            Rate at which we sample from the pixel rows of the frames.  This affects how stretched
-            the output ascii is in the vertical or y-axis [default: 2.4]
-
-    -i, --invert
-            Invert ascii greyscale ramp (For light backgrounds.  Default OFF is for dark
-            backgrounds.)
-
-        --overwrite
-            Overwrite any output file if it already exists
-
-        --max-fps <MAX_FPS>
-            Max FPS for video outputs.  If outputting to video file, `use_max_fps_for_output_video`
-            must be set to `true` to honor this setting.  Ascii videos in the terminal default to
-            max_fps=10 for smoother visuals
-
-        --as-text
-            For images, if output_file_path is specified, will save the ascii text as-is to the
-            output rather than an image file
-
-    -o, --output-file-path <OUTPUT_FILE_PATH>
-            Output file path.  If omitted, output will be written to console. Supports most image
-            formats, and .mp4 video outputs
-
-        --use-max-fps-for-output-video
-            Use the max_fps setting for video file outputs
-
-    -r, --rotate <ROTATE>
-            Rotate the input (0 = 90 CLOCKWISE, 1 = 180, 2 = 90 COUNTER-CLOCKWISE)
-
-    -h, --help
-            Print help information
-
-    -V, --version
-            Print version information
+Options:
+      --image-path <IMAGE_PATH>
+          Input Image file.  One of image_path, or video_path must be populated
+      --video-path <VIDEO_PATH>
+          Input Video file.  One of image_path, or video_path must be populated
+      --scale-down <SCALE_DOWN>
+          Multiplier to scale down input dimensions by when converting to ASCII.  For large frames, recommended to scale down more so output file size is more reasonable.  Affects output quality. Note: the output dimensions will also depend on the `font-size` setting [default: 1]
+      --font-size <FONT_SIZE>
+          Font size of the ascii characters.  Defaults to 12.0.  Affects output quality. This directly affects the scaling of the output resolution as we "expand" each pixel to fit the Cascadia font to this size.  Note: this is not in "pixels" per-se, but will roughly scale the output to a multiple of this [default: 12]
+      --height-sample-scale <HEIGHT_SAMPLE_SCALE>
+          Rate at which we sample from the pixel rows of the frames.  This affects how stretched the output ascii is vertically due to discrepancies in the width-to-height ratio of the Cascadia font, and the input/output media dimensions. This essentially lets you shrink/squeeze the ascii text horizontally, without affecting output frame resolution. 
+If you see text overflowing to the right of the output frame(s), or cut off short, you can try tuning this setting.  Larger values stretch the output. The default magic number is 2.046. See https://github.com/spoorn/media-to-ascii/issues/2 for in-depth details [default: 2.046]
+  -i, --invert
+          Invert ascii greyscale ramp (For light backgrounds.  Default OFF is for dark backgrounds.)
+      --overwrite
+          Overwrite any output file if it already exists
+      --max-fps <MAX_FPS>
+          Max FPS for video outputs.  If outputting to video file, `use_max_fps_for_output_video` must be set to `true` to honor this setting.  Ascii videos in the terminal default to max_fps=10 for smoother visuals
+      --as-text
+          For images, if output_file_path is specified, will save the ascii text as-is to the output rather than an image file
+  -o, --output-file-path <OUTPUT_FILE_PATH>
+          Output file path.  If omitted, output will be written to console. Supports most image formats, and .mp4 video outputs. Images will be resized to fit the ascii text.  Videos will honor the aspect ratio of the input, but resolution will be scaled differently approximately to `(height|width) / scale_down * font_size`
+      --use-max-fps-for-output-video
+          Use the max_fps setting for video file outputs
+  -r, --rotate <ROTATE>
+          Rotate the input (0 = 90 CLOCKWISE, 1 = 180, 2 = 90 COUNTER-CLOCKWISE)
+  -h, --help
+          Print help
+  -V, --version
+          Print version
 ```
 
 # Installation
 
+Below are different ways you can install **mediatoascii**
+
+## [Recommended] Portable Binaries
+
+> :warning: Note: you may need to disable your antivirus for the downloaded executable if it blocks it
+
+Pre-compiled binaries are available to download and use immediately under [Releases](https://github.com/spoorn/media-to-ascii/releases).  These don't require compiling/building dependencies so installation is much faster.  Select the one for your system
+
+- `mediatoascii-x86_64-unknown-linux-gnu` for Windows
+- `mediatoascii-x86_64-unknown-linux-gnu` for Linux-based systems (Ubuntu/WSL2/etc.)
+- `mediatoascii-x86_64-apple-darwin` for macOS
+
+Extract the artifacts, then you can then run the binary like any shell/script file in a terminal e.g. `./path/to/mediatoascii <ARGS>`|`cd path/to/mediatoascii && ./mediatoascii <ARGS>, or you can add it to your system PATH so it can be run from any directory.  You can easily find tutorials on the internet for "add a binary file to system PATH" for your OS system.
+
+## [Optional] Cargo
+
+If you choose an installation method below that involves the `cargo` command, you'll want to install the rust toolchain which includes `cargo` if you don't already have it: https://doc.rust-lang.org/cargo/getting-started/installation.html
+
 ## Prerequisite: OpenCV
 
-OpenCV 4.x is required on the system.
+OpenCV 4.x is required on the system if you are not using the pre-compiled binaries installation, which has OpenCV statically linked into the executable.
 
 **mediatoascii** depends on [OpenCV Rust Bindings](https://github.com/twistedfall/opencv-rust) which require the OpenCV C++ libraries to be installed.  
 
@@ -196,7 +197,7 @@ Check OpenCV version:
 dpkg -l | grep libopencv
 ```
 
-### MacOS
+#### MacOS
 
 Install OpenCV:
 
@@ -249,15 +250,7 @@ Install OpenCV:
 pacman -S clang qt6-base opencv
 ```
 
-## Installing mediatoascii
-
-Below are different ways you can install **mediatoascii**
-
-#### [Optional] Cargo
-
-If you choose an installation method below that involves the `cargo` command, you'll want to install the rust toolchain which includes `cargo` if you don't already have it: https://doc.rust-lang.org/cargo/getting-started/installation.html
-
-### [Recommended] [Cargo binstall](https://github.com/cargo-bins/cargo-binstall) Binaries
+## [Cargo binstall](https://github.com/cargo-bins/cargo-binstall) Binaries
 
 ```
 # Install cargo-binstall
@@ -265,24 +258,23 @@ cargo install cargo-binstall
 
 # Install mediatoascii
 cargo binstall mediatoascii
+
+# Run
+mediatoascii --help
+mediatoascii <ARGS>
 ```
 
-### Portable Binaries
-
-Pre-compiled binaries are available to download and use immediately under [Releases](https://github.com/spoorn/media-to-ascii/releases).  These don't require compiling/building dependencies so installation is much faster.  Select the one for your system
-
-- `mediatoascii-x86_64-unknown-linux-gnu` for Linux-based systems (Ubuntu/WSL2/etc.)
-- `mediatoascii-x86_64-apple-darwin` for macOS
-
-Extract the artifacts, then you can then run the binary like any shell/script file in a terminal e.g. `./path/to/mediatoascii <ARGS>`|`cd path/to/mediatoascii && mediatoascii <ARGS>, or you can add it to your system PATH so it can be run from any directory.  You can easily find tutorials on the internet for "add a binary file to system PATH" for your OS system.
-
-### Crates.io
+## Crates.io
 
 ```commandline
 cargo install mediatoascii
+
+# Run
+mediatoascii --help
+mediatoascii <ARGS>
 ```
 
-### Git
+## Git
 
 ```commandline
 # Clone repository and cd into it
@@ -292,11 +284,9 @@ cd mediatoascii/
 # Install the package into cargo
 cargo install --path .
 
-# OR run the pre-packaged binary in bin/
-./bin/mediatoascii ...
-
-# OR via `cargo run`
-cargo run --release
+# Run via `cargo run`
+cargo run --release -- --help
+cargo run --release -- <ARGS>
 ```
 
 # Troubleshooting
