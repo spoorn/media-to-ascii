@@ -57,7 +57,7 @@ jobs:
           export OPENCV_LINK_LIBS="libopencv_core,libopencv_videoio,libopencv_imgcodecs,libopencv_imgproc,libippiw,libittnotify,libippicv"
           export OPENCV_LINK_PATHS="/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu,/usr/lib/llvm-15/lib"
           export OPENCV_INCLUDE_PATHS="/opt/opencv/include"
-          ln -s /usr/lib/x86_64-linux-gnu/libclang.so /usr/lib/llvm-15/lib/ligclang.so.1
+          ln -s /usr/lib/llvm-15/lib/ligclang.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
           ls -R /opt/opencv
           ls -R /usr/lib
           cargo build --release
