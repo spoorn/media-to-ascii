@@ -99,16 +99,36 @@ jobs:
         run: echo "DYLD_FALLBACK_LIBRARY_PATH=$(xcode-select --print-path)/Toolchains/XcodeDefault.xctoolchain/usr/lib/" >> $GITHUB_ENV
 
       # Install opencv
-      - name: Install opencv
-        shell: /usr/local/bin/bash {0}
+      #- name: Install opencv
+      #  shell: /usr/local/bin/bash {0}
+      #  run: |
+      #    echo ${DYLD_FALLBACK_LIBRARY_PATH:-is_empty}
+      #    brew install opencv
+      
+      # Pull opencv source, unzip, configure cmake, build, and install
+      # Disable image formats like jpeg, png, tiff, as we use rust image crate instead.  See https://docs.opencv.org/4.x/db/d05/tutorial_config_reference.html
+      # Inspired from https://github.com/twistedfall/opencv-rust/issues/364
+      - name: Install OpenCV static lib
         run: |
-          echo ${DYLD_FALLBACK_LIBRARY_PATH:-is_empty}
-          brew install opencv
+          wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.8.1.zip
+          wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/refs/tags/4.8.1.zip
+          unzip opencv.zip && rm opencv.zip
+          unzip opencv_contrib.zip && rm opencv_contrib.zip
+          mkdir -p build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO -DCMAKE_INSTALL_PREFIX="/opt/opencv" -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DWITH_PNG=OFF -DWITH_JPEG=OFF -DWITH_TIFF=OFF -DWITH_WEBP=OFF -DWITH_OPENJPEG=OFF -DWITH_JASPER=OFF -DWITH_OPENEXR=OFF -DWITH_V4L=OFF  -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH="../opencv_contrib-4.8.1/modules" ../opencv-4.8.1
+          cmake --build . --target install --config Release --parallel 8
+          cmake --install . --prefix /opt/opencv
+          cd ..
         
       # Build
       - name: Build
         shell: /usr/local/bin/bash {0}
-        run: cargo build --release
+        run: |
+          export OPENCV_LINK_LIBS="libopencv_core,libopencv_videoio,libopencv_imgcodecs,libopencv_imgproc,libippiw,libittnotify,libippicv"
+          export OPENCV_LINK_PATHS="/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu,/usr/lib/llvm-15/lib"
+          export OPENCV_INCLUDE_PATHS="/opt/opencv/include"
+          ls -R /opt/opencv
+          cargo build --release
         
       # Ready artifacts for upload
       - name: Prepare Artifacts
