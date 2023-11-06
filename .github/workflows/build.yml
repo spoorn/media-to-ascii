@@ -45,18 +45,18 @@ jobs:
           unzip opencv.zip && rm opencv.zip
           unzip opencv_contrib.zip && rm opencv_contrib.zip
           mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO -DCMAKE_INSTALL_PREFIX="/opt/opencv" -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DWITH_PNG=OFF -DWITH_JPEG=OFF -DWITH_TIFF=OFF -DWITH_WEBP=OFF -DWITH_OPENJPEG=OFF -DWITH_JASPER=OFF -DWITH_OPENEXR=OFF -DWITH_V4L=OFF  -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH="../opencv_contrib-4.8.1/modules" ../opencv-4.8.1
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO -DCMAKE_INSTALL_PREFIX=/opt/opencv -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DWITH_PNG=OFF -DWITH_JPEG=OFF -DWITH_TIFF=OFF -DWITH_WEBP=OFF -DWITH_OPENJPEG=OFF -DWITH_JASPER=OFF -DWITH_OPENEXR=OFF -DWITH_V4L=OFF  -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-4.8.1/modules ../opencv-4.8.1
           cmake --build . --target install --config Release --parallel 8
           cmake --install . --prefix /opt/opencv
           cd ..
 
-      # libclang files are in /usr/lib/llvm-##/lib
+      # libclang files are in /usr/lib/llvm-##/lib.  We symlink it to one of the opencv_link_paths
       # Build
       - name: Build
         run: |
-          export OPENCV_LINK_LIBS="libopencv_core,libopencv_videoio,libopencv_imgcodecs,libopencv_imgproc,libippiw,libittnotify,libippicv"
-          export OPENCV_LINK_PATHS="/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu,/usr/lib/llvm-15/lib"
-          export OPENCV_INCLUDE_PATHS="/opt/opencv/include"
+          export OPENCV_LINK_LIBS=liblibopencv_core,liblibopencv_videoio,liblibopencv_imgcodecs,liblibopencv_imgproc,liblibippiw,liblibittnotify,liblibippicv
+          export OPENCV_LINK_PATHS=/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu,/usr/lib/llvm-15/lib
+          export OPENCV_INCLUDE_PATHS=/opt/opencv/include
           sudo ln -s /usr/lib/llvm-15/lib/libclang.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
           ls -R /opt/opencv
           ls -R /usr/lib
