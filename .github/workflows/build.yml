@@ -240,7 +240,7 @@ jobs:
       # Ready artifacts for upload
       - name: Prepare Artifacts
         run: |
-          $env:MEDIATOASCII_VERSION=$(perl -ne 'print "$1\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
+          $env:MEDIATOASCII_VERSION=$(perl -ne 'print "$1\\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
           Compress-Archive -Path target/release/mediatoascii.exe -Destination ./mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip 
         
       # Upload artifact: https://github.com/actions/upload-artifact
