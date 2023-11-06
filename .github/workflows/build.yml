@@ -53,10 +53,11 @@ jobs:
       # Build
       - name: Build
         run: |
-          export OPENCV_LINK_LIBS="opencv_core481,opencv_videoio481,opencv_imgcodecs481,opencv_imgproc481,ippiw,ittnotify,ippicvmt,zlib"
-          export OPENCV_LINK_PATHS="/opt/opencv/x64/vc17/staticlib"
+          export OPENCV_LINK_LIBS="libopencv_core,libopencv_videoio,libopencv_imgcodecs,libopencv_imgproc,libippiw,libittnotify,libippicv"
+          export OPENCV_LINK_PATHS="/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty"
           export OPENCV_INCLUDE_PATHS="/opt/opencv/include"
-          ls -R /opt
+          ls -R /opt/opencv
+          ls -R /user/lib
           cargo build --release
         
       # Ready artifacts for upload
