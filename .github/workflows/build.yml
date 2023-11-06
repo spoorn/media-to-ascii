@@ -50,14 +50,14 @@ jobs:
           cmake --install . --prefix /opt/opencv
           cd ..
 
-      # Note: OPENCV_LINK_LIBS ordering matters for linux.  Put lower level deps after higher level
+      # Note: OPENCV_LINK_LIBS ordering matters for linux.  Put lower level deps after higher level.  See https://answers.opencv.org/question/186124/undefined-reference-to-cvsoftdoubleoperator/
       # libclang files are in /usr/lib/llvm-##/lib.  We symlink it to one of the opencv_link_paths
       # OpenCV-rust looks for "opencv2/core/version.hpp" for the OpenCV version: https://github.com/twistedfall/opencv-rust/issues/368
       #  which is under /<install-prefix>/include/opencv4 for linux
       # Build
       - name: Build
         run: |
-          export OPENCV_LINK_LIBS="opencv_videoio,opencv_imgproc,opencv_imgcodecs,opencv_core,libippiw,libittnotify,libippicv,z"
+          export OPENCV_LINK_LIBS="opencv_videoio,opencv_imgcodecs,opencv_imgproc,opencv_core,libippiw,libittnotify,libippicv,z"
           export OPENCV_LINK_PATHS=/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu
           export OPENCV_INCLUDE_PATHS=/opt/opencv/include,/opt/opencv/include/opencv4
           sudo ln -s /usr/lib/llvm-15/lib/libclang.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
