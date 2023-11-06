@@ -57,7 +57,7 @@ jobs:
           export OPENCV_LINK_PATHS="/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty"
           export OPENCV_INCLUDE_PATHS="/opt/opencv/include"
           ls -R /opt/opencv
-          ls -R /user/lib
+          ls -R /usr/lib
           cargo build --release
         
       # Ready artifacts for upload
@@ -154,7 +154,7 @@ jobs:
         with:
           # Arguments to pass to Chocolatey
           # don't install opencv here as we build the staticlib below
-          args: install llvm wget
+          args: install llvm wget strawberryperl
           # Docker image to use
           #image: # optional, default is ghcr.io/crazy-max/ghaction-chocolatey
 
