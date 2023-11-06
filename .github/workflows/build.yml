@@ -54,8 +54,8 @@ jobs:
       # Build
       - name: Build
         run: |
-          export OPENCV_LINK_LIBS=liblibopencv_core,liblibopencv_videoio,liblibopencv_imgcodecs,liblibopencv_imgproc,liblibippiw,liblibittnotify,liblibippicv
-          export OPENCV_LINK_PATHS=/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu,/usr/lib/llvm-15/lib
+          export OPENCV_LINK_LIBS="opencv_videoio,opencv_imgproc,opencv_imgcodecs,opencv_core,liblibippiw,liblibittnotify,liblibippicv,zlib"
+          export OPENCV_LINK_PATHS=/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu
           export OPENCV_INCLUDE_PATHS=/opt/opencv/include
           sudo ln -s /usr/lib/llvm-15/lib/libclang.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
           ls -R /opt/opencv
