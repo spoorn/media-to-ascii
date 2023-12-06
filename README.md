@@ -289,6 +289,9 @@ cargo run --release -- --help
 cargo run --release -- <ARGS>
 ```
 
+# Development
+You will need `rustup` installed, [OpenCV](#prerequisite:-opencv), and make sure you update any OpenCV environment variables as per https://github.com/twistedfall/opencv-rust, along with the OpenCV bin folder appended to `PATH` ([For Example on Windows](https://github.com/twistedfall/opencv-rust/issues/118#issuecomment-619608278)).
+
 # Troubleshooting
 
 1. If you're trying to update Ubuntu on WSL2, you may run into silent failures during the upgrade
