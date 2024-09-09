@@ -1,7 +1,7 @@
+use ab_glyph::FontRef;
 use image::Rgb;
-use once_cell::sync::Lazy;
 use opencv::core::Scalar;
-use rusttype::Font;
+use std::sync::LazyLock;
 
 /// NTSC formula: https://en.wikipedia.org/wiki/Grayscale
 pub const RGB_TO_GREYSCALE: (f32, f32, f32) = (0.299, 0.587, 0.114);
@@ -20,10 +20,8 @@ pub static DARK_BGR_SCALAR: Scalar = Scalar::new(54.0, 42.0, 40.0, 0.0);
 /// for the video dimensions so the text fits to the frames' ends
 /// See https://github.com/spoorn/media-to-ascii/issues/2
 pub const MAGIC_HEIGHT_TO_WIDTH_RATIO: f32 = 2.046;
-pub static CASCADIA_FONT: Lazy<Font<'static>> = Lazy::new(|| {
-    let font_data = include_bytes!("fonts/Cascadia.ttf");
-    Font::try_from_bytes(font_data).unwrap()
-});
+pub static CASCADIA_FONT: LazyLock<FontRef> =
+    LazyLock::new(|| FontRef::try_from_slice(include_bytes!("fonts/Cascadia.ttf")).unwrap());
 
 // From http://paulbourke.net/dataformats/asciiart/
 // let mut greyscale_ramp: Vec<&str> = vec![

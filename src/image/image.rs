@@ -1,11 +1,10 @@
-use std::cell::UnsafeCell;
-
+use ab_glyph::PxScale;
 use derive_builder::Builder;
 use image::{GenericImageView, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use opencv::core::Size;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
-use rusttype::Scale;
+use std::cell::UnsafeCell;
 
 use crate::util::constants::{
     BLACK_RGB, CASCADIA_FONT, DARK_RGB, GREYSCALE_RAMP, MAGIC_HEIGHT_TO_WIDTH_RATIO, REVERSE_GREYSCALE_RAMP,
@@ -71,8 +70,8 @@ pub fn generate_ascii_image(
             text_color,
             0,
             (row as f32 * font_size) as i32,
-            Scale::uniform(font_size),
-            &CASCADIA_FONT,
+            PxScale::from(font_size),
+            &*CASCADIA_FONT,
             text_row.as_str(),
         );
     });

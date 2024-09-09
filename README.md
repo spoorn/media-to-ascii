@@ -1,4 +1,5 @@
 # Media-To-Ascii
+
 CLI and utilities for converting media files (images/videos) to ascii outputs (output media file or print to console).  
 Supports most standard image formats and video formats (depends on OpenCV).
 
@@ -6,13 +7,14 @@ Only output format for videos is `.mp4` at the moment
 
 ## Examples
 
-mediatoascii is capable of extremely high quality ascii images/videos (click on the images below to see the full resolution), or the usual fun scaled-down ones!
+mediatoascii is capable of extremely high quality ascii images/videos (click on the images below to see the full
+resolution), or the usual fun scaled-down ones!
 
 ### Videos
 
 ![](https://github.com/spoorn/media-to-ascii/blob/main/examples/fairytail.gif?raw=true)
 
-(From https://www.tiktok.com/@swishanime_/video/7143035431066602794)  
+(From https://www.tiktok.com/@swishanime_/video/7143035431066602794)
 
 Or for a more high quality version: https://i.imgur.com/vRJMpA1.mp4
 
@@ -75,7 +77,7 @@ PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP55JY777777777777777777YJ55555555555555555555J
 
 ### Videos
 
-```commandline
+```bash
 # Playing videos as ascii art in the console (warning, for large videos, this may cause flickering on certain terminals)
 mediatoascii --video-path <FILE_PATH>
 
@@ -88,7 +90,8 @@ mediatoascii --video-path <FILE_PATH> -o ascii.mp4 --scale-down 2.0
 ```
 
 ### Images
-```commandline
+
+```bash
 # Converting images to ascii in the console
 mediatoascii --image-path <IMAGE_PATH>
 
@@ -151,25 +154,33 @@ Below are different ways you can install **mediatoascii**
 
 > :warning: Note: you may need to disable your antivirus for the downloaded executable if it blocks it
 
-Pre-compiled binaries are available to download and use immediately under [Releases](https://github.com/spoorn/media-to-ascii/releases).  These don't require compiling/building dependencies so installation is much faster.  Select the one for your system
+Pre-compiled binaries are available to download and use immediately
+under [Releases](https://github.com/spoorn/media-to-ascii/releases). These don't require compiling/building dependencies
+so installation is much faster. Select the one for your system
 
-- `mediatoascii-x86_64-unknown-linux-gnu` for Windows
+- `mediatoascii-x86_64-pc-windows-gnu` for Windows
 - `mediatoascii-x86_64-unknown-linux-gnu` for Linux-based systems (Ubuntu/WSL2/etc.)
 - `mediatoascii-x86_64-apple-darwin` for macOS
 
-Extract the artifacts, then you can then run the binary like any shell/script file in a terminal e.g. `./path/to/mediatoascii <ARGS>`|`cd path/to/mediatoascii && ./mediatoascii <ARGS>, or you can add it to your system PATH so it can be run from any directory.  You can easily find tutorials on the internet for "add a binary file to system PATH" for your OS system.
+Extract the artifacts, then you can then run the binary like any shell/script file in a terminal
+e.g. `./path/to/mediatoascii <ARGS>`|`cd path/to/mediatoascii && ./mediatoascii <ARGS>, or you can add it to your system
+PATH so it can be run from any directory. You can easily find tutorials on the internet for "add a binary file to system
+PATH" for your OS system.
 
 ## [Optional] Cargo
 
-If you choose an installation method below that involves the `cargo` command, you'll want to install the rust toolchain which includes `cargo` if you don't already have it: https://doc.rust-lang.org/cargo/getting-started/installation.html
+If you choose an installation method below that involves the `cargo` command, you'll want to install the rust toolchain
+which includes `cargo` if you don't already have it: https://doc.rust-lang.org/cargo/getting-started/installation.html
 
 ## Prerequisite: OpenCV
 
-OpenCV 4.x is required on the system if you are not using the pre-compiled binaries installation, which has OpenCV statically linked into the executable.
+OpenCV 4.x is required on the system if you are not using the pre-compiled binaries installation, which has OpenCV
+statically linked into the executable.
 
-**mediatoascii** depends on [OpenCV Rust Bindings](https://github.com/twistedfall/opencv-rust) which require the OpenCV C++ libraries to be installed.  
+**mediatoascii** depends on [OpenCV Rust Bindings](https://github.com/twistedfall/opencv-rust) which require the OpenCV
+C++ libraries to be installed.
 
-See https://github.com/twistedfall/opencv-rust#getting-opencv for instructions on different systems.  
+See https://github.com/twistedfall/opencv-rust#getting-opencv for instructions on different systems.
 
 Below is an abbreviation
 
@@ -183,7 +194,8 @@ To check Ubuntu version:
 lsb_release -a
 ```
 
-If you are on an older version of Ubuntu, see various [tutorials for updating your system](https://www.nextofwindows.com/how-to-upgrade-existing-wsl-wsl2-ubuntu-18-04-to-20-04).
+If you are on an older version of Ubuntu, see
+various [tutorials for updating your system](https://www.nextofwindows.com/how-to-upgrade-existing-wsl-wsl2-ubuntu-18-04-to-20-04).
 
 Install OpenCV and related libs:
 
@@ -217,7 +229,8 @@ brew info opencv
 
 Follow https://github.com/twistedfall/opencv-rust#windows-package (recommend chocolatey route).
 
-Make sure you set the environment variables `OPENCV_LINK_LIBS`, `OPENCV_LINK_PATHS` and `OPENCV_INCLUDE_PATHS` properly, according to https://github.com/twistedfall/opencv-rust/issues/118#issuecomment-619608278
+Make sure you set the environment variables `OPENCV_LINK_LIBS`, `OPENCV_LINK_PATHS` and `OPENCV_INCLUDE_PATHS` properly,
+according to https://github.com/twistedfall/opencv-rust/issues/118#issuecomment-619608278
 
 Also, make sure the opencv `bin/` is in your PATH: https://github.com/twistedfall/opencv-rust/issues/113
 
@@ -229,18 +242,19 @@ CMake Error at ports/atlmfc/portfile.cmake:7 (message):
   component of Visual Studio.
 ```
 
-Make sure you have Visual Studio installed with `Desktop development with C++`, ATL and MFC checked.  In newer versions of Visual Studio, these may be [defaulted to disabled](https://learn.microsoft.com/en-us/cpp/mfc/mfc-and-atl?view=msvc-170).
+Make sure you have Visual Studio installed with `Desktop development with C++`, ATL and MFC checked. In newer versions
+of Visual Studio, these may
+be [defaulted to disabled](https://learn.microsoft.com/en-us/cpp/mfc/mfc-and-atl?view=msvc-170).
 You can install them in the Visual Studio Installer when you modify the Visual Studio installation.
 
 #### WSL
 
-You can also install opencv through WSL2 - allowing a Linux subsystem with a terminal to run on Windows: https://learn.microsoft.com/en-us/windows/wsl/install.
+You can also install opencv through WSL2 - allowing a Linux subsystem with a terminal to run on
+Windows: https://learn.microsoft.com/en-us/windows/wsl/install.
 
-Then you can follow the Ubuntu setup above.  
+Then you can follow the Ubuntu setup above.
 
 Note: on WSL2, drives in paths are prefixed with `/mnt/c/` rather than `C:/`
-
-
 
 ### Arch Linux
 
@@ -290,7 +304,11 @@ cargo run --release -- <ARGS>
 ```
 
 # Development
-You will need `rustup` installed, [OpenCV](#prerequisite:-opencv), and make sure you update any OpenCV environment variables as per https://github.com/twistedfall/opencv-rust, along with the OpenCV bin folder appended to `PATH` ([For Example on Windows](https://github.com/twistedfall/opencv-rust/issues/118#issuecomment-619608278)).
+
+You will need `rustup` installed, [OpenCV](#prerequisite:-opencv), and make sure you update any OpenCV environment
+variables as per https://github.com/twistedfall/opencv-rust, along with the OpenCV bin folder appended
+to `PATH` (
+e.g. `C:\tools\opencv\build\x64\vc16\bin`) ([For Example on Windows](https://github.com/twistedfall/opencv-rust/issues/118#issuecomment-619608278)).
 
 # Troubleshooting
 
@@ -298,5 +316,11 @@ You will need `rustup` installed, [OpenCV](#prerequisite:-opencv), and make sure
     - See https://askubuntu.com/questions/1340153/how-to-upgrade-ubuntu-18-04-to-20-04-in-wsl-when-wsl-export-fails
 2. `error while loading shared libraries: libopencv_videoio.so.4.2: cannot open shared object file: No such file or directory`
     - Make sure you have OpenCV 4.x installed
-3. `Picture size 12668x22512 is invalid ... global cap_ffmpeg_impl.hpp:3066 open VIDEOIO/FFMPEG: Failed to initialize VideoWriter` or `dimensions too large for MPEG-4`
-    - mediatoascii scales up the image when writing ascii frames and there is a frame size limit to mpeg4.  Try setting the `--scale-down` setting to scale down the output resolution.  See https://github.com/spoorn/media-to-ascii/issues/2 for why the image has to be scaled up
+3. `Picture size 12668x22512 is invalid ... global cap_ffmpeg_impl.hpp:3066 open VIDEOIO/FFMPEG: Failed to initialize VideoWriter`
+   or `dimensions too large for MPEG-4`
+    - mediatoascii scales up the image when writing ascii frames and there is a frame size limit to mpeg4. Try setting
+      the `--scale-down` setting to scale down the output resolution.
+      See https://github.com/spoorn/media-to-ascii/issues/2 for why the image has to be scaled up
+4. `error: process didn't exit successfully: `
+   target\debug\mediatoascii.exe` (exit code: 0xc0000135, STATUS_DLL_NOT_FOUND)`
+    - Make sure the OpenCV bin folder is in `PATH`
