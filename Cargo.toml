@@ -18,6 +18,11 @@ exclude = ["examples/"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "mediatoascii"
+# "cdylib" is necessary for Python modules
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 ab_glyph = "0.2.28"
 clap = { version = "4.5.17", features = ["derive"] }
@@ -25,9 +30,11 @@ derive_builder = "0.20.1"
 image = "0.25.2"
 imageproc = "0.25.0"
 indicatif = "0.17.8"
-opencv = { version = "0.92.3", default-features = false, features = ["videoio"] }
+opencv = { version = "0.92.3", default-features = false, features = ["clang-runtime", "videoio"] }
 rayon = "1.10.0"
 rusttype = "0.9.3"
+# PyO3 dependencies
+pyo3 = { version = "0.23.5", features = ["extension-module"] }
 
 [profile.release]
 lto = true

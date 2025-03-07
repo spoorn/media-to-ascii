@@ -69,7 +69,41 @@ PPPPPPPPPPPPPPPPPPPPPPPPPPPPPYYYYY::~YYYYYYYYYYYYYYYYYY:~~~~~~:YYYYYYYY555555555
 PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPJYYYYYYYYYYYYYYYYYYYYYY^~:~:~:777Y5555555555555555555555555555555555JJJJJJJ
 PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP55JY777777777777777777YJ55555555555555555555J5JJJJJJJJJJJJJJJJJJJJJJJJJJ
 
+## Python Bindings
+
+In addition to the CLI, media-to-ascii now provides Python bindings via PyO3, allowing you to use the library directly from Python.
+
+### Installation
+
+```bash
+pip install mediatoascii
 ```
+
+### Usage
+
+```python
+import mediatoascii
+
+# Convert an image to ASCII and print to console
+mediatoascii.image_to_ascii("path/to/image.jpg")
+
+# Convert an image to ASCII and save as a text file
+mediatoascii.image_to_ascii(
+    "path/to/image.jpg",
+    as_text=True,
+    output_file_path="output.txt"
+)
+
+# Convert a video to ASCII and save as an MP4 file
+mediatoascii.video_to_ascii(
+    "path/to/video.mp4",
+    scale_down=2.0,
+    font_size=14.0,
+    output_file_path="output.mp4"
+)
+```
+
+For more details on the Python bindings, see the [Python README](python/README.md).
 
 # How To Use
 
