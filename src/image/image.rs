@@ -186,7 +186,19 @@ pub fn process_image(config: ImageConfig) {
     let ascii = convert_image_to_ascii(&config);
 
     if let Some(file) = config.output_file_path.as_ref() {
-        write_to_file(file, config.overwrite, &ascii);
+        // Check if the output file should be PNG or text based on extension
+        if file.to_lowercase().ends_with(".png") {
+            write_to_image(
+                file,
+                config.overwrite,
+                &ascii,
+                &get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size),
+                config.invert,
+                config.font_size,
+            );
+        } else {
+            write_to_file(file, config.overwrite, &ascii);
+        }
     }
 
     if let Some(file) = config.output_image_path.as_ref() {
@@ -202,5 +214,28 @@ pub fn process_image(config: ImageConfig) {
 
     if config.output_file_path.is_none() && config.output_image_path.is_none() {
         print_ascii(&ascii);
+    }
+}
+
+#[inline]
+pub fn write_ascii_to_png(
+    ascii: &[Vec<String>],
+    output_path: &str,
+    height_sample_scale: f32,
+    font_size: f32,
+    invert: bool,
+    overwrite: bool,
+) {
+    let size = get_size_from_ascii(ascii, height_sample_scale, font_size);
+    let image = generate_ascii_image(ascii, &size, invert, font_size);
+    
+    check_file_exists(output_path, overwrite);
+    match image.save(output_path) {
+        Ok(_) => {
+            println!("Successfully saved ASCII art PNG to {}", output_path);
+        }
+        Err(e) => {
+            eprintln!("Failed to save ASCII art PNG to {}: {}", output_path, e);
+        }
     }
 }

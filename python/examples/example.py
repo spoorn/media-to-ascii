@@ -23,20 +23,27 @@ def process_image_bytes(image_path, scale_down, font_size, invert, output_path=N
         custom_chars=custom_chars.split() if custom_chars else None
     )
     
-    # Join the ASCII art into a single string with \r\n line endings
-    ascii_str = '\r\n'.join(''.join(row) for row in ascii_art) + '\r\n'
-    
-    # Write to file if output path is specified
     if output_path:
-        with open(output_path, 'w', newline='') as f:  # Use newline='' to prevent extra conversions
-            f.write(ascii_str)
-        print(f"ASCII art saved to: {output_path}")
+        # Write ASCII art to file (PNG or text based on extension)
+        result = mediatoascii.image_to_ascii(
+            image_path,
+            scale_down=scale_down,
+            font_size=font_size,
+            invert=invert,
+            output_file_path=output_path,
+            custom_chars=custom_chars.split() if custom_chars else None
+        )
+        print(result)
     else:
+        # Print ASCII art to console
+        ascii_str = '\r\n'.join(''.join(row) for row in ascii_art) + '\r\n'
         print(ascii_str)
 
 def process_image_file(image_path, scale_down, font_size, invert, output_path=None, custom_chars=None):
     """Process image using the file-based method."""
     print(f"Converting image (file method): {image_path}")
+    
+    # Process the image and write to file (PNG or text based on extension)
     result = mediatoascii.image_to_ascii(
         image_path,
         scale_down=scale_down,

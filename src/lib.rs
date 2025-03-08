@@ -1,6 +1,8 @@
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
+use crate::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;
+
 mod image;
 mod util;
 mod video;
@@ -202,12 +204,38 @@ fn video_to_ascii(
     Ok("Video processed successfully".to_string())
 }
 
+/// Write ASCII art to PNG file
+#[pyfunction]
+fn write_ascii_to_png(
+    py: Python<'_>,
+    ascii_art: Vec<Vec<String>>,
+    output_path: String,
+    height_sample_scale: Option<f32>,
+    font_size: Option<f32>,
+    invert: Option<bool>,
+    overwrite: Option<bool>,
+) -> PyResult<String> {
+    // Set default values if not provided
+    let height_sample_scale = height_sample_scale.unwrap_or(MAGIC_HEIGHT_TO_WIDTH_RATIO);
+    let font_size = font_size.unwrap_or(12.0);
+    let invert = invert.unwrap_or(false);
+    let overwrite = overwrite.unwrap_or(false);
+    
+    // Allow other Python threads to run during the potentially long-running operation
+    py.allow_threads(|| {
+        image::write_ascii_to_png(&ascii_art, &output_path, height_sample_scale, font_size, invert, overwrite)
+    });
+    
+    Ok("ASCII art PNG saved successfully".to_string())
+}
+
 /// Python module for media-to-ascii
 #[pymodule]
 fn mediatoascii(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(image_to_ascii, m)?)?;
     m.add_function(wrap_pyfunction!(image_bytes_to_ascii, m)?)?;
     m.add_function(wrap_pyfunction!(video_to_ascii, m)?)?;
+    m.add_function(wrap_pyfunction!(write_ascii_to_png, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 } 
