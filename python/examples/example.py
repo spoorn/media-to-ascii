@@ -6,6 +6,45 @@ import os
 import argparse
 import mediatoascii
 
+def process_image_bytes(image_path, scale_down, font_size, invert, output_path=None):
+    """Process image using the bytes-based method."""
+    print(f"Converting image (bytes method): {image_path}")
+    
+    # Read the image file into bytes
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
+    
+    # Convert bytes to ASCII
+    ascii_art = mediatoascii.image_bytes_to_ascii(
+        image_bytes,
+        scale_down=scale_down,
+        font_size=font_size,
+        invert=invert
+    )
+    
+    # Join the ASCII art into a single string with \r\n line endings
+    ascii_str = '\r\n'.join(''.join(row) for row in ascii_art) + '\r\n'
+    
+    # Write to file if output path is specified
+    if output_path:
+        with open(output_path, 'w', newline='') as f:  # Use newline='' to prevent extra conversions
+            f.write(ascii_str)
+        print(f"ASCII art saved to: {output_path}")
+    else:
+        print(ascii_str)
+
+def process_image_file(image_path, scale_down, font_size, invert, output_path=None):
+    """Process image using the file-based method."""
+    print(f"Converting image (file method): {image_path}")
+    result = mediatoascii.image_to_ascii(
+        image_path,
+        scale_down=scale_down,
+        font_size=font_size,
+        invert=invert,
+        output_file_path=output_path
+    )
+    print(result)
+
 def main():
     parser = argparse.ArgumentParser(description="Convert media to ASCII art")
     parser.add_argument("--image", type=str, help="Path to input image file")
@@ -16,6 +55,7 @@ def main():
     parser.add_argument("--invert", action="store_true", help="Invert ASCII greyscale ramp")
     parser.add_argument("--max-fps", type=int, help="Maximum FPS for video outputs")
     parser.add_argument("--use-max-fps", action="store_true", help="Use max FPS for video file outputs")
+    parser.add_argument("--use-bytes", action="store_true", help="Use bytes-based processing method")
     
     args = parser.parse_args()
     
@@ -28,15 +68,22 @@ def main():
     print(f"Using mediatoascii version: {mediatoascii.__version__}")
     
     if args.image:
-        print(f"Converting image: {args.image}")
-        result = mediatoascii.image_to_ascii(
-            args.image,
-            scale_down=args.scale,
-            font_size=args.font_size,
-            invert=args.invert,
-            output_file_path=args.output
-        )
-        print(result)
+        if args.use_bytes:
+            process_image_bytes(
+                args.image,
+                scale_down=args.scale,
+                font_size=args.font_size,
+                invert=args.invert,
+                output_path=args.output
+            )
+        else:
+            process_image_file(
+                args.image,
+                scale_down=args.scale,
+                font_size=args.font_size,
+                invert=args.invert,
+                output_path=args.output
+            )
     
     if args.video:
         print(f"Converting video: {args.video}")

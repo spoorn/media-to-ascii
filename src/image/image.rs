@@ -133,6 +133,42 @@ pub fn convert_image_to_ascii(config: &ImageConfig) -> Vec<Vec<&'static str>> {
     res
 }
 
+#[inline]
+pub fn convert_image_bytes_to_ascii(
+    image_bytes: &[u8],
+    config: &ImageConfig,
+) -> Vec<Vec<&'static str>> {
+    let scale_down = config.scale_down;
+    let height_sample_scale = config.height_sample_scale;
+
+    // Invert greyscale, for dark backgrounds
+    let greyscale_ramp: &[&str] = if config.invert { &REVERSE_GREYSCALE_RAMP } else { &GREYSCALE_RAMP };
+
+    let img = image::load_from_memory(image_bytes)
+        .unwrap_or_else(|_| panic!("Could not load image from memory"));
+    let (width, height) = img.dimensions();
+    let scaled_width = (width as f32 / scale_down) as usize;
+    let scaled_height = ((height as f32 / scale_down) / height_sample_scale) as usize;
+
+    let mut res = vec![vec![" "; scaled_width]; scaled_height];
+
+    for (y, row) in res.iter_mut().enumerate() {
+        for x in 0..scaled_width {
+            let pix =
+                img.get_pixel((x as f32 * scale_down) as u32, (y as f32 * scale_down * height_sample_scale) as u32);
+            if pix[3] != 0 {
+                let greyscale_value = RGB_TO_GREYSCALE.0 * pix[0] as f32
+                    + RGB_TO_GREYSCALE.1 * pix[1] as f32
+                    + RGB_TO_GREYSCALE.2 * pix[2] as f32;
+                let index = (greyscale_value * (greyscale_ramp.len() - 1) as f32 / 255.0).ceil() as usize;
+                row[x] = greyscale_ramp[index];
+            }
+        }
+    }
+
+    res
+}
+
 pub fn process_image(config: ImageConfig) {
     let ascii = convert_image_to_ascii(&config);
 

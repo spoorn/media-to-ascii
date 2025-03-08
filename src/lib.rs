@@ -67,6 +67,54 @@ fn image_to_ascii(
     Ok("Image processed successfully".to_string())
 }
 
+/// Convert image bytes to ASCII art
+#[pyfunction]
+fn image_bytes_to_ascii(
+    py: Python<'_>,
+    image_bytes: &[u8],
+    scale_down: Option<f32>,
+    font_size: Option<f32>,
+    height_sample_scale: Option<f32>,
+    invert: Option<bool>,
+) -> PyResult<Vec<Vec<String>>> {
+    // Create a builder with default values
+    let mut builder = image::ImageConfigBuilder::default();
+    
+    // Set optional fields if provided
+    if let Some(val) = scale_down {
+        builder.scale_down(val);
+    }
+    
+    if let Some(val) = font_size {
+        builder.font_size(val);
+    }
+    
+    if let Some(val) = height_sample_scale {
+        builder.height_sample_scale(val);
+    }
+    
+    if let Some(val) = invert {
+        builder.invert(val);
+    }
+    
+    // Build the config
+    let config = builder.build().map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Failed to build image config: {}", e))
+    })?;
+    
+    // Allow other Python threads to run during the potentially long-running operation
+    let ascii_art = py.allow_threads(|| {
+        // Convert bytes to ASCII
+        image::convert_image_bytes_to_ascii(image_bytes, &config)
+    });
+    
+    // Convert &str to String for Python
+    Ok(ascii_art
+        .into_iter()
+        .map(|row| row.into_iter().map(String::from).collect())
+        .collect())
+}
+
 /// Convert a video to ASCII art
 #[pyfunction]
 fn video_to_ascii(
@@ -143,6 +191,7 @@ fn video_to_ascii(
 #[pymodule]
 fn mediatoascii(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(image_to_ascii, m)?)?;
+    m.add_function(wrap_pyfunction!(image_bytes_to_ascii, m)?)?;
     m.add_function(wrap_pyfunction!(video_to_ascii, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
