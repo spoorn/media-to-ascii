@@ -31,6 +31,7 @@ pub struct VideoConfig {
     overwrite: bool,
     use_max_fps_for_output_video: bool,
     rotate: i32,
+    custom_chars: Option<Vec<String>>,
 }
 
 impl Default for VideoConfig {
@@ -46,6 +47,7 @@ impl Default for VideoConfig {
             overwrite: false,
             use_max_fps_for_output_video: false,
             rotate: -1,
+            custom_chars: None,
         }
     }
 }
@@ -54,21 +56,26 @@ impl Default for VideoConfig {
 ///
 /// References https://github.com/luketio/asciiframe/blob/main/src/converter.rs#L15.
 #[inline]
-pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) -> Vec<Vec<&'static str>> {
+pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) -> Vec<Vec<String>> {
     let scale_down = config.scale_down;
     let height_sample_scale = config.height_sample_scale;
 
     let width = frame.cols();
     let height = frame.rows();
-    //println!("width: {}, height: {}", width, height);
-    // TODO: scaled dims
     let scaled_width = (width as f32 / scale_down) as usize;
     let scaled_height = ((height as f32 / scale_down) / height_sample_scale) as usize;
-    //println!("scaled scaled_width: {}, scaled_height: {}", scaled_width, scaled_height);
-    let mut res = vec![vec![" "; scaled_width]; scaled_height];
+    let mut res = vec![vec![" ".to_string(); scaled_width]; scaled_height];
 
-    // Invert greyscale, for dark backgrounds
-    let greyscale_ramp: &[&str] = if config.invert { &REVERSE_GREYSCALE_RAMP } else { &GREYSCALE_RAMP };
+    // Use custom chars if provided, otherwise use default ramp
+    let greyscale_ramp: Vec<String> = if let Some(ref chars) = config.custom_chars {
+        chars.clone()
+    } else {
+        if config.invert {
+            REVERSE_GREYSCALE_RAMP.iter().map(|s| s.to_string()).collect()
+        } else {
+            GREYSCALE_RAMP.iter().map(|s| s.to_string()).collect()
+        }
+    };
 
     // SAFETY: operates pixels independently
     res.par_iter_mut().enumerate().for_each(|(y, row)| {
@@ -82,7 +89,7 @@ pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) ->
                 + RGB_TO_GREYSCALE.1 * pix[1] as f32
                 + RGB_TO_GREYSCALE.2 * pix[2] as f32;
             let index = (greyscale_value * (greyscale_ramp.len() - 1) as f32 / 255.0).ceil() as usize;
-            row[x] = greyscale_ramp[index];
+            row[x] = greyscale_ramp[index].clone();
         })
     });
 
@@ -90,7 +97,7 @@ pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) ->
 }
 
 #[inline]
-pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_writer: &mut VideoWriter, size: &Size) {
+pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<String>], video_writer: &mut VideoWriter, size: &Size) {
     let frame = generate_ascii_image(ascii, size, config.invert, config.font_size);
     //println!("image frame width: {}, height: {}", frame.width(), frame.height());
 

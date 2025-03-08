@@ -24,6 +24,7 @@ pub struct ImageConfig {
     output_file_path: Option<String>,
     output_image_path: Option<String>,
     overwrite: bool,
+    custom_chars: Option<Vec<String>>,
 }
 
 impl Default for ImageConfig {
@@ -37,13 +38,14 @@ impl Default for ImageConfig {
             output_file_path: None,
             output_image_path: None,
             overwrite: false,
+            custom_chars: None,
         }
     }
 }
 
 #[inline]
 pub fn generate_ascii_image(
-    ascii: &[Vec<&str>],
+    ascii: &[Vec<String>],
     size: &Size,
     invert: bool,
     font_size: f32,
@@ -56,11 +58,6 @@ pub fn generate_ascii_image(
         size.height as u32,
         background_color,
     ))));
-
-    // let mut flat_ascii = vec![];
-    // ascii.iter().for_each(|row| {
-    //     flat_ascii.extend(row);
-    // });
 
     // SAFETY: Operates on pixels independently
     ascii.par_iter().enumerate().for_each(|(row, row_data)| unsafe {
@@ -82,7 +79,7 @@ pub fn generate_ascii_image(
 pub fn write_to_image<S: AsRef<str>>(
     output_file: S,
     overwrite: bool,
-    ascii: &[Vec<&str>],
+    ascii: &[Vec<String>],
     size: &Size,
     invert: bool,
     font_size: f32,
@@ -100,21 +97,29 @@ pub fn write_to_image<S: AsRef<str>>(
 }
 
 #[inline]
-pub fn convert_image_to_ascii(config: &ImageConfig) -> Vec<Vec<&'static str>> {
+pub fn convert_image_to_ascii(config: &ImageConfig) -> Vec<Vec<String>> {
     let img_path = config.image_path.as_str();
     check_valid_file(img_path);
     let scale_down = config.scale_down;
     let height_sample_scale = config.height_sample_scale;
 
-    // Invert greyscale, for dark backgrounds
-    let greyscale_ramp: &[&str] = if config.invert { &REVERSE_GREYSCALE_RAMP } else { &GREYSCALE_RAMP };
+    // Use custom chars if provided, otherwise use default ramp
+    let greyscale_ramp: Vec<String> = if let Some(ref chars) = config.custom_chars {
+        chars.clone()
+    } else {
+        if config.invert {
+            REVERSE_GREYSCALE_RAMP.iter().map(|s| s.to_string()).collect()
+        } else {
+            GREYSCALE_RAMP.iter().map(|s| s.to_string()).collect()
+        }
+    };
 
     let img = image::open(img_path).unwrap_or_else(|_| panic!("Image at {img_path} could not be opened"));
     let (width, height) = img.dimensions();
     let scaled_width = (width as f32 / scale_down) as usize;
     let scaled_height = ((height as f32 / scale_down) / height_sample_scale) as usize;
 
-    let mut res = vec![vec![" "; scaled_width]; scaled_height];
+    let mut res = vec![vec![" ".to_string(); scaled_width]; scaled_height];
 
     for (y, row) in res.iter_mut().enumerate() {
         for x in 0..scaled_width {
@@ -125,7 +130,7 @@ pub fn convert_image_to_ascii(config: &ImageConfig) -> Vec<Vec<&'static str>> {
                     + RGB_TO_GREYSCALE.1 * pix[1] as f32
                     + RGB_TO_GREYSCALE.2 * pix[2] as f32;
                 let index = (greyscale_value * (greyscale_ramp.len() - 1) as f32 / 255.0).ceil() as usize;
-                row[x] = greyscale_ramp[index];
+                row[x] = greyscale_ramp[index].clone();
             }
         }
     }
@@ -137,12 +142,20 @@ pub fn convert_image_to_ascii(config: &ImageConfig) -> Vec<Vec<&'static str>> {
 pub fn convert_image_bytes_to_ascii(
     image_bytes: &[u8],
     config: &ImageConfig,
-) -> Vec<Vec<&'static str>> {
+) -> Vec<Vec<String>> {
     let scale_down = config.scale_down;
     let height_sample_scale = config.height_sample_scale;
 
-    // Invert greyscale, for dark backgrounds
-    let greyscale_ramp: &[&str] = if config.invert { &REVERSE_GREYSCALE_RAMP } else { &GREYSCALE_RAMP };
+    // Use custom chars if provided, otherwise use default ramp
+    let greyscale_ramp: Vec<String> = if let Some(ref chars) = config.custom_chars {
+        chars.clone()
+    } else {
+        if config.invert {
+            REVERSE_GREYSCALE_RAMP.iter().map(|s| s.to_string()).collect()
+        } else {
+            GREYSCALE_RAMP.iter().map(|s| s.to_string()).collect()
+        }
+    };
 
     let img = image::load_from_memory(image_bytes)
         .unwrap_or_else(|_| panic!("Could not load image from memory"));
@@ -150,7 +163,7 @@ pub fn convert_image_bytes_to_ascii(
     let scaled_width = (width as f32 / scale_down) as usize;
     let scaled_height = ((height as f32 / scale_down) / height_sample_scale) as usize;
 
-    let mut res = vec![vec![" "; scaled_width]; scaled_height];
+    let mut res = vec![vec![" ".to_string(); scaled_width]; scaled_height];
 
     for (y, row) in res.iter_mut().enumerate() {
         for x in 0..scaled_width {
@@ -161,7 +174,7 @@ pub fn convert_image_bytes_to_ascii(
                     + RGB_TO_GREYSCALE.1 * pix[1] as f32
                     + RGB_TO_GREYSCALE.2 * pix[2] as f32;
                 let index = (greyscale_value * (greyscale_ramp.len() - 1) as f32 / 255.0).ceil() as usize;
-                row[x] = greyscale_ramp[index];
+                row[x] = greyscale_ramp[index].clone();
             }
         }
     }

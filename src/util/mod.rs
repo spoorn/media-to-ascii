@@ -46,7 +46,7 @@ impl DerefMut for UnsafeImageBuffer {
 }
 
 #[inline]
-pub fn ascii_to_str(ascii: &[Vec<&str>]) -> String {
+pub fn ascii_to_str(ascii: &[Vec<String>]) -> String {
     let mut buffer = String::default();
     for row in ascii {
         for s in row {
@@ -57,10 +57,10 @@ pub fn ascii_to_str(ascii: &[Vec<&str>]) -> String {
     buffer
 }
 
-pub fn print_ascii(ascii: &[Vec<&str>]) {
+pub fn print_ascii(ascii: &[Vec<String>]) {
     print!("{}", ascii_to_str(ascii));
 }
 
-pub fn get_size_from_ascii(ascii: &[Vec<&str>], height_sample_scale: f32, font_size: f32) -> Size_<i32> {
+pub fn get_size_from_ascii(ascii: &[Vec<String>], height_sample_scale: f32, font_size: f32) -> Size_<i32> {
     Size::new((ascii[0].len() as f32 * font_size / height_sample_scale) as i32, (ascii.len() as f32 * font_size) as i32)
 }

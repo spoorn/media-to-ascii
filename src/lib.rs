@@ -17,6 +17,7 @@ fn image_to_ascii(
     output_file_path: Option<String>,
     output_image_path: Option<String>,
     overwrite: Option<bool>,
+    custom_chars: Option<Vec<String>>,
 ) -> PyResult<String> {
     // Create a builder with default values
     let mut builder = image::ImageConfigBuilder::default();
@@ -52,6 +53,10 @@ fn image_to_ascii(
     if let Some(val) = overwrite {
         builder.overwrite(val);
     }
+
+    if let Some(val) = custom_chars {
+        builder.custom_chars(Some(val));
+    }
     
     // Build the config
     let config = builder.build().map_err(|e| {
@@ -76,6 +81,7 @@ fn image_bytes_to_ascii(
     font_size: Option<f32>,
     height_sample_scale: Option<f32>,
     invert: Option<bool>,
+    custom_chars: Option<Vec<String>>,
 ) -> PyResult<Vec<Vec<String>>> {
     // Create a builder with default values
     let mut builder = image::ImageConfigBuilder::default();
@@ -95,6 +101,10 @@ fn image_bytes_to_ascii(
     
     if let Some(val) = invert {
         builder.invert(val);
+    }
+
+    if let Some(val) = custom_chars {
+        builder.custom_chars(Some(val));
     }
     
     // Build the config
@@ -129,6 +139,7 @@ fn video_to_ascii(
     output_video_path: Option<String>,
     use_max_fps_for_output_video: Option<bool>,
     rotate: Option<i32>,
+    custom_chars: Option<Vec<String>>,
 ) -> PyResult<String> {
     // Create a builder with default values
     let mut builder = video::VideoConfigBuilder::default();
@@ -171,6 +182,10 @@ fn video_to_ascii(
     
     if let Some(val) = rotate {
         builder.rotate(val);
+    }
+
+    if let Some(val) = custom_chars {
+        builder.custom_chars(Some(val));
     }
     
     // Build the config

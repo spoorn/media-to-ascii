@@ -6,7 +6,7 @@ import os
 import argparse
 import mediatoascii
 
-def process_image_bytes(image_path, scale_down, font_size, invert, output_path=None):
+def process_image_bytes(image_path, scale_down, font_size, invert, output_path=None, custom_chars=None):
     """Process image using the bytes-based method."""
     print(f"Converting image (bytes method): {image_path}")
     
@@ -19,7 +19,8 @@ def process_image_bytes(image_path, scale_down, font_size, invert, output_path=N
         image_bytes,
         scale_down=scale_down,
         font_size=font_size,
-        invert=invert
+        invert=invert,
+        custom_chars=custom_chars.split() if custom_chars else None
     )
     
     # Join the ASCII art into a single string with \r\n line endings
@@ -33,7 +34,7 @@ def process_image_bytes(image_path, scale_down, font_size, invert, output_path=N
     else:
         print(ascii_str)
 
-def process_image_file(image_path, scale_down, font_size, invert, output_path=None):
+def process_image_file(image_path, scale_down, font_size, invert, output_path=None, custom_chars=None):
     """Process image using the file-based method."""
     print(f"Converting image (file method): {image_path}")
     result = mediatoascii.image_to_ascii(
@@ -41,7 +42,8 @@ def process_image_file(image_path, scale_down, font_size, invert, output_path=No
         scale_down=scale_down,
         font_size=font_size,
         invert=invert,
-        output_file_path=output_path
+        output_file_path=output_path,
+        custom_chars=custom_chars.split() if custom_chars else None
     )
     print(result)
 
@@ -56,6 +58,7 @@ def main():
     parser.add_argument("--max-fps", type=int, help="Maximum FPS for video outputs")
     parser.add_argument("--use-max-fps", action="store_true", help="Use max FPS for video file outputs")
     parser.add_argument("--use-bytes", action="store_true", help="Use bytes-based processing method")
+    parser.add_argument("--chars", type=str, help="Custom character set (space-separated, from darkest to lightest)")
     
     args = parser.parse_args()
     
@@ -74,7 +77,8 @@ def main():
                 scale_down=args.scale,
                 font_size=args.font_size,
                 invert=args.invert,
-                output_path=args.output
+                output_path=args.output,
+                custom_chars=args.chars
             )
         else:
             process_image_file(
@@ -82,7 +86,8 @@ def main():
                 scale_down=args.scale,
                 font_size=args.font_size,
                 invert=args.invert,
-                output_path=args.output
+                output_path=args.output,
+                custom_chars=args.chars
             )
     
     if args.video:
@@ -94,7 +99,8 @@ def main():
             invert=args.invert,
             max_fps=args.max_fps,
             output_video_path=args.output,
-            use_max_fps_for_output_video=args.use_max_fps
+            use_max_fps_for_output_video=args.use_max_fps,
+            custom_chars=args.chars.split() if args.chars else None
         )
         print(result)
 

@@ -16,22 +16,22 @@ pub fn check_valid_file<S: AsRef<str>>(path: S) {
     }
 }
 
-pub fn write_to_file<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &[Vec<&str>]) {
+pub fn write_to_file<S: AsRef<str>>(output_file: S, overwrite: bool, ascii: &[Vec<String>]) {
     let output_file = output_file.as_ref();
     check_file_exists(output_file, overwrite);
-
-    // TODO: change to create_new
-    let file_option = OpenOptions::new().write(true).create(true).truncate(true).open(output_file);
-
-    match file_option {
-        Ok(mut file) => {
-            for row in ascii {
-                file.write_all(row.join("").as_bytes()).unwrap();
-                file.write_all("\r\n".as_bytes()).unwrap();
-            }
+    match std::fs::write(
+        output_file,
+        ascii
+            .iter()
+            .map(|row| row.join(""))
+            .collect::<Vec<String>>()
+            .join("\n"),
+    ) {
+        Ok(_) => {
+            println!("Successfully saved ascii art to {}", output_file);
         }
-        Err(_) => {
-            panic!("Could not write output to file {}", output_file);
+        Err(e) => {
+            eprintln!("Failed to save ascii art to {}: {}", output_file, e);
         }
     }
 }
