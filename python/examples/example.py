@@ -6,7 +6,7 @@ import os
 import argparse
 import mediatoascii
 
-def process_image_bytes(image_path, scale_down, font_size, invert, output_path=None, custom_chars=None):
+def process_image_bytes(image_path, scale_down, font_size, invert, output_path=None, custom_chars=None, preserve_color=False):
     """Process image using the bytes-based method."""
     print(f"Converting image (bytes method): {image_path}")
     
@@ -15,12 +15,13 @@ def process_image_bytes(image_path, scale_down, font_size, invert, output_path=N
         image_bytes = f.read()
     
     # Convert bytes to ASCII
-    ascii_art = mediatoascii.image_bytes_to_ascii(
+    result = mediatoascii.image_bytes_to_ascii(
         image_bytes,
         scale_down=scale_down,
         font_size=font_size,
         invert=invert,
-        custom_chars=custom_chars.split() if custom_chars else None
+        custom_chars=custom_chars.split() if custom_chars else None,
+        preserve_color=preserve_color
     )
     
     if output_path:
@@ -31,15 +32,22 @@ def process_image_bytes(image_path, scale_down, font_size, invert, output_path=N
             font_size=font_size,
             invert=invert,
             output_file_path=output_path,
-            custom_chars=custom_chars.split() if custom_chars else None
+            custom_chars=custom_chars.split() if custom_chars else None,
+            preserve_color=preserve_color
         )
         print(result)
     else:
         # Print ASCII art to console
+        ascii_art = result["ascii"]
         ascii_str = '\r\n'.join(''.join(row) for row in ascii_art) + '\r\n'
         print(ascii_str)
+        
+        # Print color information if available
+        if "colors" in result:
+            print("\nColor information is available for each character")
+            print(f"Number of color values: {len(result['colors']) * len(result['colors'][0])}")
 
-def process_image_file(image_path, scale_down, font_size, invert, output_path=None, custom_chars=None):
+def process_image_file(image_path, scale_down, font_size, invert, output_path=None, custom_chars=None, preserve_color=False):
     """Process image using the file-based method."""
     print(f"Converting image (file method): {image_path}")
     
@@ -50,9 +58,23 @@ def process_image_file(image_path, scale_down, font_size, invert, output_path=No
         font_size=font_size,
         invert=invert,
         output_file_path=output_path,
-        custom_chars=custom_chars.split() if custom_chars else None
+        custom_chars=custom_chars.split() if custom_chars else None,
+        preserve_color=preserve_color
     )
-    print(result)
+    
+    if isinstance(result, dict):
+        # Print ASCII art to console if no output file
+        if not output_path:
+            ascii_art = result["ascii"]
+            ascii_str = '\r\n'.join(''.join(row) for row in ascii_art) + '\r\n'
+            print(ascii_str)
+            
+            # Print color information if available
+            if "colors" in result:
+                print("\nColor information is available for each character")
+                print(f"Number of color values: {len(result['colors']) * len(result['colors'][0])}")
+    else:
+        print(result)
 
 def main():
     parser = argparse.ArgumentParser(description="Convert media to ASCII art")
@@ -66,6 +88,7 @@ def main():
     parser.add_argument("--use-max-fps", action="store_true", help="Use max FPS for video file outputs")
     parser.add_argument("--use-bytes", action="store_true", help="Use bytes-based processing method")
     parser.add_argument("--chars", type=str, help="Custom character set (space-separated, from darkest to lightest)")
+    parser.add_argument("--preserve-color", action="store_true", help="Preserve original image colors in output")
     
     args = parser.parse_args()
     
@@ -85,7 +108,8 @@ def main():
                 font_size=args.font_size,
                 invert=args.invert,
                 output_path=args.output,
-                custom_chars=args.chars
+                custom_chars=args.chars,
+                preserve_color=args.preserve_color
             )
         else:
             process_image_file(
@@ -94,7 +118,8 @@ def main():
                 font_size=args.font_size,
                 invert=args.invert,
                 output_path=args.output,
-                custom_chars=args.chars
+                custom_chars=args.chars,
+                preserve_color=args.preserve_color
             )
     
     if args.video:
@@ -107,7 +132,8 @@ def main():
             max_fps=args.max_fps,
             output_video_path=args.output,
             use_max_fps_for_output_video=args.use_max_fps,
-            custom_chars=args.chars.split() if args.chars else None
+            custom_chars=args.chars.split() if args.chars else None,
+            preserve_color=args.preserve_color
         )
         print(result)
 

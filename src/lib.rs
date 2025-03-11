@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
+use pyo3::types::PyDict;
 
 use crate::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;
 
@@ -20,12 +21,13 @@ fn image_to_ascii(
     output_image_path: Option<String>,
     overwrite: Option<bool>,
     custom_chars: Option<Vec<String>>,
-) -> PyResult<String> {
+    preserve_color: Option<bool>,
+) -> PyResult<PyObject> {
     // Create a builder with default values
     let mut builder = image::ImageConfigBuilder::default();
     
     // Set required fields
-    builder.image_path(image_path);
+    builder.image_path(image_path.clone());
     
     // Set optional fields if provided
     if let Some(val) = scale_down {
@@ -59,6 +61,10 @@ fn image_to_ascii(
     if let Some(val) = custom_chars {
         builder.custom_chars(Some(val));
     }
+
+    if let Some(val) = preserve_color {
+        builder.preserve_color(val);
+    }
     
     // Build the config
     let config = builder.build().map_err(|e| {
@@ -66,12 +72,23 @@ fn image_to_ascii(
     })?;
     
     // Allow other Python threads to run during the potentially long-running operation
-    py.allow_threads(|| {
-        // Process the image
+    let output = py.allow_threads(|| {
+        // First get the ASCII/color data
+        let output = image::convert_image_to_ascii(&config);
+        
+        // Then handle any file output
         image::process_image(config);
+        
+        output
     });
-    
-    Ok("Image processed successfully".to_string())
+
+    // Convert output to Python dictionary
+    let result = PyDict::new(py);
+    result.set_item("ascii", output.ascii)?;
+    if let Some(colors) = output.colors {
+        result.set_item("colors", colors)?;
+    }
+    Ok(result.into())
 }
 
 /// Convert image bytes to ASCII art
@@ -84,7 +101,8 @@ fn image_bytes_to_ascii(
     height_sample_scale: Option<f32>,
     invert: Option<bool>,
     custom_chars: Option<Vec<String>>,
-) -> PyResult<Vec<Vec<String>>> {
+    preserve_color: Option<bool>,
+) -> PyResult<PyObject> {
     // Create a builder with default values
     let mut builder = image::ImageConfigBuilder::default();
     
@@ -108,6 +126,10 @@ fn image_bytes_to_ascii(
     if let Some(val) = custom_chars {
         builder.custom_chars(Some(val));
     }
+
+    if let Some(val) = preserve_color {
+        builder.preserve_color(val);
+    }
     
     // Build the config
     let config = builder.build().map_err(|e| {
@@ -115,16 +137,18 @@ fn image_bytes_to_ascii(
     })?;
     
     // Allow other Python threads to run during the potentially long-running operation
-    let ascii_art = py.allow_threads(|| {
+    let output = py.allow_threads(|| {
         // Convert bytes to ASCII
         image::convert_image_bytes_to_ascii(image_bytes, &config)
     });
     
-    // Convert &str to String for Python
-    Ok(ascii_art
-        .into_iter()
-        .map(|row| row.into_iter().map(String::from).collect())
-        .collect())
+    // Convert output to Python dictionary
+    let result = PyDict::new(py);
+    result.set_item("ascii", output.ascii)?;
+    if let Some(colors) = output.colors {
+        result.set_item("colors", colors)?;
+    }
+    Ok(result.into())
 }
 
 /// Convert a video to ASCII art

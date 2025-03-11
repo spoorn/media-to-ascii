@@ -1,5 +1,3 @@
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::path::Path;
 
 pub fn check_file_exists<S: AsRef<str>>(file: S, overwrite: bool) {

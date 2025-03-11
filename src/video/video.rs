@@ -98,7 +98,7 @@ pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) ->
 
 #[inline]
 pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<String>], video_writer: &mut VideoWriter, size: &Size) {
-    let frame = generate_ascii_image(ascii, size, config.invert, config.font_size);
+    let frame = generate_ascii_image(ascii, None, size, config.invert, config.font_size);
     //println!("image frame width: {}, height: {}", frame.width(), frame.height());
 
     // Create opencv CV_8UC3 frame
