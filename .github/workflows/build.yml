@@ -69,7 +69,7 @@ jobs:
       # Ready artifacts for upload
       - name: Prepare Artifacts
         run: |
-          export MEDIATOASCII_VERSION=$(perl -ne 'print "$1\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
+          export MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
           chmod +x target/release/mediatoascii
           tar -czvf mediatoascii-x86_64-unknown-linux-gnu-$MEDIATOASCII_VERSION.tar.gz -C target/release/ mediatoascii
         
@@ -144,7 +144,7 @@ jobs:
       # Ready artifacts for upload
       - name: Prepare Artifacts
         run: |
-          export MEDIATOASCII_VERSION=$(perl -ne 'print "$1\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
+          export MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
           chmod +x target/release/mediatoascii
           zip -j mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.zip target/release/mediatoascii
         
@@ -243,7 +243,7 @@ jobs:
       # Ready artifacts for upload
       - name: Prepare Artifacts
         run: |
-          $env:MEDIATOASCII_VERSION=$(perl -ne 'print "$1\\n" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
+          $env:MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
           Compress-Archive -Path target/release/mediatoascii.exe -Destination ./mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip 
         
       # Upload artifact: https://github.com/actions/upload-artifact
