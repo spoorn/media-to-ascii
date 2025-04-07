@@ -181,7 +181,7 @@ pub fn process_video(config: VideoConfig) {
                 // TODO: allow any video output
                 video_writer = VideoWriter::new(
                     output_video_path.unwrap().as_str(),
-                    VideoWriter::fourcc('m', 'p', '4', 'v').unwrap(),
+                    VideoWriter::fourcc('a', 'v', 'c', '1').unwrap(),
                     video_fps,
                     output_frame_size,
                     true,
