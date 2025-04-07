@@ -12,5 +12,4 @@
 .idea
 
 # mp4 output for testing
-output.mp4
-output.mkv
+output*.*
