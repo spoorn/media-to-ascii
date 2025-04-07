@@ -5,10 +5,10 @@ name: build
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the "main" branch
-#   push:
-#     branches: [ "main" ]
-#   pull_request:
-#     branches: [ "main" ]
+  #   push:
+  #     branches: [ "main" ]
+  #   pull_request:
+  #     branches: [ "main" ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -65,14 +65,15 @@ jobs:
           ls -R /opt/opencv
           ls -R /usr/lib
           cargo build --release
-        
+
       # Ready artifacts for upload
       - name: Prepare Artifacts
         run: |
           export MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
           chmod +x target/release/mediatoascii
-          tar -czvf mediatoascii-x86_64-unknown-linux-gnu-$MEDIATOASCII_VERSION.tar.gz -C target/release/ mediatoascii
-        
+          mv codecs/libopenh264-1.8.0-linux64.4.so target/release/
+          tar -czvf mediatoascii-x86_64-unknown-linux-gnu-$MEDIATOASCII_VERSION.tar.gz -C target/release/ mediatoascii libopenh264-1.8.0-linux64.4.so
+
       # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -80,7 +81,7 @@ jobs:
           name: mediatoascii-x86_64-unknown-linux-gnu
           path: mediatoascii-x86_64-unknown-linux-gnu-*.tar.gz
           retention-days: 1
-        
+
   macos-build:
     # The type of runner that the job will run on
     runs-on: macos-latest
@@ -140,14 +141,15 @@ jobs:
           ls -R /usr/lib
           ls -R /usr/local
           cargo build --release
-        
+
       # Ready artifacts for upload
       - name: Prepare Artifacts
         run: |
           export MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
           chmod +x target/release/mediatoascii
-          zip -j mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.zip target/release/mediatoascii
-        
+          mv codecs/libopenh264-1.8.0-osx64.4.dylib target/release/
+          zip -j mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.zip target/release/mediatoascii target/release/libopenh264-1.8.0-osx64.4.dylib
+
       # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -155,7 +157,7 @@ jobs:
           name: mediatoascii-x86_64-apple-darwin
           path: mediatoascii-x86_64-apple-darwin-*.zip
           retention-days: 1
-        
+
   windows-build:
     # The type of runner that the job will run on
     runs-on: windows-latest
@@ -210,7 +212,7 @@ jobs:
           cmake --build . --target install --config Release --parallel 8
           cmake --install . --prefix D:/opt/opencv
           cd ..
-            
+
       # - name: Install Clang
       #   # You may pin to the exact commit or the version.
       #   # uses: egor-tensin/setup-clang@01d437c0618e76d3c44e7d58f5d175c75cb37bac
@@ -239,13 +241,14 @@ jobs:
           $env:OPENCV_INCLUDE_PATHS="D:/opt/opencv/include"
           $env:OPENCV_MSVC_CRT="static"
           cargo build --release
-        
+
       # Ready artifacts for upload
       - name: Prepare Artifacts
         run: |
           $env:MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
           Compress-Archive -Path target/release/mediatoascii.exe -Destination ./mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip 
-        
+          Compress-Archive -Path codecs/openh264-1.8.0-win64.dll -Update -Destination ./mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip 
+
       # Upload artifact: https://github.com/actions/upload-artifact
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -253,7 +256,7 @@ jobs:
           name: mediatoascii-x86_64-pc-windows-gnu
           path: mediatoascii-x86_64-pc-windows-gnu-*.zip
           retention-days: 1
-        
+
       # Upload artifact: https://github.com/actions/upload-artifact
       # - name: Upload Artifacts
       #   uses: actions/upload-artifact@v3
