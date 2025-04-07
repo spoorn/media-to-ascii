@@ -3,33 +3,65 @@ use std::io::Write;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
 
-use derive_builder::Builder;
-use indicatif::ProgressBar;
-use opencv::core::{Mat, MatTraitConst, MatTraitManual, Size, Vec3b, CV_8UC3};
-use opencv::videoio;
-use opencv::videoio::{VideoCaptureTrait, VideoCaptureTraitConst, VideoWriter, VideoWriterTrait, CAP_ANY};
-use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
-
 use crate::image::generate_ascii_image;
 use crate::util::constants::{
     DARK_BGR_SCALAR, GREYSCALE_RAMP, MAGIC_HEIGHT_TO_WIDTH_RATIO, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE,
     WHITE_BGR_SCALAR,
 };
 use crate::util::file_util::{check_file_exists, check_valid_file};
-use crate::util::{ascii_to_str, get_size_from_ascii, UnsafeMat};
+use crate::util::{UnsafeMat, ascii_to_str, get_size_from_ascii};
+use crate::video::errors::Error;
+use derive_builder::Builder;
+use indicatif::ProgressBar;
+use opencv::core::{CV_8UC3, Mat, MatTraitConst, MatTraitManual, Size, Vec3b};
+use opencv::videoio;
+use opencv::videoio::{CAP_ANY, VideoCaptureTrait, VideoCaptureTraitConst, VideoWriter, VideoWriterTrait};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use serde::Deserialize;
 
-#[derive(Builder, Debug)]
+/// We track progress percentage in a global static mut as we only support 1 job at a time right now
+pub static mut PROGRESS_PERCENTAGE: f32 = 0.0;
+
+pub type VideoResult<T> = Result<T, crate::video::errors::Error>;
+
+#[derive(Builder, Debug, Deserialize)]
 #[builder(default)]
 pub struct VideoConfig {
+    /// Input Video file
     video_path: String,
+    /// Multiplier to scale down input dimensions by when converting to ASCII.  For large frames,
+    /// recommended to scale down more so output file size is more reasonable.  Affects output quality.
+    /// Note: the output dimensions will also depend on the `font-size` setting.
     scale_down: f32,
+    /// Font size of the ascii characters.  Defaults to 12.0.  Affects output quality.
+    /// This directly affects the scaling of the output resolution as we "expand" each pixel to fit
+    /// the Cascadia font to this size.  Note: this is not in "pixels" per-se, but will roughly scale
+    /// the output to a multiple of this.
     font_size: f32,
+    /// Rate at which we sample from the pixel rows of the frames.  This affects how stretched the
+    /// output ascii is vertically due to discrepancies in the width-to-height ratio of the
+    /// Cascadia font, and the input/output media dimensions.
+    /// This essentially lets you shrink/squeeze the ascii text horizontally, without affecting
+    /// output frame resolution.
+    /// If you see text overflowing to the right of the output frame(s), or cut off short, you can
+    /// try tuning this setting.  Larger values stretch the output. The default magic number is 2.046.
+    /// See https://github.com/spoorn/media-to-ascii/issues/2 for in-depth details.
     height_sample_scale: f32,
     invert: bool,
+    /// Max FPS for video outputs.  If outputting to video file, `use_max_fps_for_output_video`
+    /// must be set to `true` to honor this setting.  Ascii videos in the terminal default to
+    /// max_fps=10 for smoother visuals.
     max_fps: u64,
+    /// Output file path.  If omitted, output will be written to console.
+    /// Supports most image formats, and .mp4 video outputs.
+    /// Images will be resized to fit the ascii text.  Videos will honor the aspect ratio of the
+    /// input, but resolution will be scaled differently approximately to `(height|width) / scale_down * font_size`.
     output_video_path: Option<String>,
+    /// Overwrite any output file if it already exists
     overwrite: bool,
+    /// Use the max_fps setting for video file outputs.
     use_max_fps_for_output_video: bool,
+    /// Rotate the input (0 = 90 CLOCKWISE, 1 = 180, 2 = 90 COUNTER-CLOCKWISE)
     rotate: i32,
 }
 
@@ -117,7 +149,7 @@ pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_wri
 /// Processes video
 ///
 /// References https://github.com/luketio/asciiframe/blob/7f23d8843278ad9cd4b53ff7110005aceeec1fcb/src/renderer.rs#L69.
-pub fn process_video(config: VideoConfig) {
+pub fn process_video(config: VideoConfig) -> VideoResult<()> {
     let video_path = config.video_path.as_str();
     check_valid_file(video_path);
 
@@ -152,6 +184,7 @@ pub fn process_video(config: VideoConfig) {
     let progressbar = ProgressBar::new(num_frames);
 
     for i in 0..num_frames {
+        println!("Processing frame {i} of {num_frames}");
         let start = SystemTime::now();
         let mut frame = UnsafeMat(Mat::default());
 
@@ -176,6 +209,12 @@ pub fn process_video(config: VideoConfig) {
             if i == 0 {
                 // Initialize VideoWriter for real
                 output_frame_size = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
+                // Openh264 codec seems to have this dimension limitation so we cap it
+                if output_frame_size.width * output_frame_size.height > 9437184 {
+                    // a / b = width / height
+                    // a * b <= 9437184
+                    return Err(Error::ResolutionTooLarge);
+                }
                 //println!("frame size: {:?}", output_frame_size);
                 let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
                 // TODO: allow any video output
@@ -190,6 +229,9 @@ pub fn process_video(config: VideoConfig) {
             }
 
             progressbar.inc(1);
+            unsafe {
+                PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
+            }
             if config.use_max_fps_for_output_video && i % frame_cut == 0 {
                 continue;
             }
@@ -214,8 +256,13 @@ pub fn process_video(config: VideoConfig) {
     // Writes the video explicitly just for clarity
     video_writer.release().unwrap();
     progressbar.finish();
+    unsafe {
+        PROGRESS_PERCENTAGE = 1.0;
+    }
 
     if output_video_file {
         println!("Finished writing output video file to {}", output_video_path.unwrap());
     }
+
+    Ok(())
 }

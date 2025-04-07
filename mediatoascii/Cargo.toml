@@ -31,3 +31,5 @@ indicatif = "0.17.11"
 opencv = { version = "0.94.4", default-features = false, features = ["videoio"] }
 rayon = "1.10.0"
 rusttype = "0.9.3"
+serde = { version = "1.0.219", features = ["derive"] }
+thiserror = "2.0"

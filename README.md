@@ -306,19 +306,32 @@ cargo run --release -- <ARGS>
 You will need `rustup` installed, [OpenCV](#prerequisite:-opencv), and make sure you update any OpenCV environment
 variables as per https://github.com/twistedfall/opencv-rust, along with the OpenCV bin folder appended
 to `PATH` (
-e.g. `C:\tools\opencv\build\x64\vc16\bin`) ([For Example on Windows](https://github.com/twistedfall/opencv-rust/issues/118#issuecomment-619608278)).
+e.g.
+`C:\tools\opencv\build\x64\vc16\bin`) ([For Example on Windows](https://github.com/twistedfall/opencv-rust/issues/118#issuecomment-619608278)).
 
 # Troubleshooting
 
 1. If you're trying to update Ubuntu on WSL2, you may run into silent failures during the upgrade
     - See https://askubuntu.com/questions/1340153/how-to-upgrade-ubuntu-18-04-to-20-04-in-wsl-when-wsl-export-fails
-2. `error while loading shared libraries: libopencv_videoio.so.4.2: cannot open shared object file: No such file or directory`
-    - Make sure you have OpenCV 4.x installed
-3. `Picture size 12668x22512 is invalid ... global cap_ffmpeg_impl.hpp:3066 open VIDEOIO/FFMPEG: Failed to initialize VideoWriter`
-   or `dimensions too large for MPEG-4`
-    - mediatoascii scales up the image when writing ascii frames and there is a frame size limit to mpeg4. Try setting
-      the `--scale-down` setting to scale down the output resolution.
-      See https://github.com/spoorn/media-to-ascii/issues/2 for why the image has to be scaled up
+2.
+
+`error while loading shared libraries: libopencv_videoio.so.4.2: cannot open shared object file: No such file or directory`
+- Make sure you have OpenCV 4.x installed
+
+3.
+
+`Picture size 12668x22512 is invalid ... global cap_ffmpeg_impl.hpp:3066 open VIDEOIO/FFMPEG: Failed to initialize VideoWriter`
+or `dimensions too large for MPEG-4` or `[libopenh264 @ 000001d90497c4c0] [OpenH264] this = 0x000001D905984E00, Error:ParamValidationExt(), width > 0, height > 0, width * height <= 9437184, invalid 2848 x 4288 in dependency layer settings!
+[libopenh264 @ 000001d90497c4c0] [OpenH264] this = 0x000001D905984E00, Error:WelsInitEncoderExt(), ParamValidationExt failed return 2.
+[libopenh264 @ 000001d90497c4c0] [OpenH264] this = 0x000001D905984E00, Error:CWelsH264SVCEncoder::Initialize(), WelsInitEncoderExt failed.
+[libopenh264 @ 000001d90497c4c0] Initialize failed
+[ERROR:0@0.017] global cap_ffmpeg_impl.hpp:3264 open Could not open codec libopenh264, error: Unspecified error (-1313558101)
+[ERROR:0@0.017] global cap_ffmpeg_impl.hpp:3281 open VIDEOIO/FFMPEG: Failed to initialize VideoWriter`
+- mediatoascii scales up the image when writing ascii frames and there is a frame size limit to mpeg4/h264. Try
+setting
+the `--scale-down` setting to scale down the output resolution.
+See https://github.com/spoorn/media-to-ascii/issues/2 for why the image has to be scaled up
+
 4. `error: process didn't exit successfully: `
    target\debug\mediatoascii.exe` (exit code: 0xc0000135, STATUS_DLL_NOT_FOUND)`
     - Make sure the OpenCV bin folder is in `PATH`

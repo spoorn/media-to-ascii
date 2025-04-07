@@ -1,8 +1,8 @@
 use clap::{ArgGroup, Parser};
 
-use mediatoascii::image::{process_image, ImageConfigBuilder};
+use mediatoascii::image::{ImageConfigBuilder, process_image};
 use mediatoascii::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;
-use mediatoascii::video::{process_video, VideoConfigBuilder};
+use mediatoascii::video::{VideoConfigBuilder, process_video};
 
 /// Converts media (images and videos) to ascii, and displays output either as an output media file
 /// or in the terminal.
@@ -71,7 +71,7 @@ struct Cli {
     rotate: Option<i32>,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // if let Ok(mut file) = File::open(Path::new("output.mp4")) {
     //     let mut buffer = [0u8; 1024];
     //     let mut output = File::create("outputtest.mp4").unwrap();
@@ -141,8 +141,10 @@ fn main() {
         }
 
         let config = config_builder.build().unwrap();
-        process_video(config);
+        process_video(config)?;
     } else {
         panic!("Either image-path or video-path must be provided!");
     }
+
+    Ok(())
 }

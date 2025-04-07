@@ -19,9 +19,6 @@ Supports most standard image formats, and video formats.
 mediatoascii = { path = "../mediatoascii" }
 clap = { version = "4.5.35", features = ["derive"] }
 
-[profile.release]
-lto = true
-
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/{ version }/{ name }-{ target }-{ version }{ archive-suffix }"
 bin-dir = "{ bin }"

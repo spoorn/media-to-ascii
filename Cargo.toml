@@ -1,5 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-    "mediatoascii"
-, "mediatoascii-cli"]
+    "mediatoascii",
+    "mediatoascii-cli",
+    "mediatoascii-app/src-tauri",
+]
+
+[profile.release]
+lto = true
