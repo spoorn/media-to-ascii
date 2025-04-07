@@ -1,0 +1,33 @@
+[package]
+name = "mediatoascii-cli"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+authors = ["spoorn"]
+homepage = "https://github.com/spoorn/media-to-ascii"
+repository = "https://github.com/spoorn/media-to-ascii"
+documentation = "https://github.com/spoorn/media-to-ascii"
+keywords = ["ascii", "cli", "image", "video", "opencv"]
+categories = ["command-line-utilities", "computer-vision", "encoding", "multimedia", "multimedia::encoding"]
+readme = "../README.md"
+description = """
+CLI for converting media files (images/videos) to ascii outputs (output media file or print to console).
+Supports most standard image formats, and video formats.
+"""
+
+[dependencies]
+mediatoascii = { path = "../mediatoascii" }
+clap = { version = "4.5.35", features = ["derive"] }
+
+[profile.release]
+lto = true
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/{ version }/{ name }-{ target }-{ version }{ archive-suffix }"
+bin-dir = "{ bin }"
+
+[package.metadata.binstall.overrides.x86_64-apple-darwin]
+pkg-fmt = "zip"
+
+[package.metadata.binstall.overrides.x86_64-unknown-linux-musl]
+pkg-url = "{ repo }/releases/download/{ version }/{ name }-x86_64-unknown-linux-gnu-{ version }{ archive-suffix }"

@@ -1,9 +1,7 @@
 # Media-To-Ascii
 
 CLI and utilities for converting media files (images/videos) to ascii outputs (output media file or print to console).  
-Supports most standard image formats and video formats (depends on OpenCV).
-
-Only output format for videos is `.mp4` at the moment
+Supports most standard image formats and video formats (encodes using x264/h.264/avc1).
 
 ## Examples
 

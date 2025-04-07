@@ -12,4 +12,5 @@
 .idea
 
 # mp4 output for testing
+mediatoascii-cli/output*.*
 output*.*

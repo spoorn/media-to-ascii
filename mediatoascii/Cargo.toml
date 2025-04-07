@@ -1,0 +1,33 @@
+[package]
+name = "mediatoascii"
+version = "0.7.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+authors = ["spoorn"]
+homepage = "https://github.com/spoorn/media-to-ascii"
+repository = "https://github.com/spoorn/media-to-ascii"
+documentation = "https://github.com/spoorn/media-to-ascii"
+keywords = ["ascii", "cli", "image", "video", "opencv"]
+categories = ["command-line-utilities", "computer-vision", "encoding", "multimedia", "multimedia::encoding"]
+readme = "../README.md"
+description = """
+Utilities for converting media files (images/videos) to ascii outputs (output media file or print to console).
+Supports most standard image formats, and video formats.
+"""
+
+[lib]
+name = "mediatoascii"
+crate-type = ["lib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ab_glyph = "0.2.29"
+clap = { version = "4.5.35", features = ["derive"] }
+derive_builder = "0.20.2"
+image = "0.25.6"
+imageproc = "0.25.0"
+indicatif = "0.17.11"
+opencv = { version = "0.94.4", default-features = false, features = ["videoio"] }
+rayon = "1.10.0"
+rusttype = "0.9.3"

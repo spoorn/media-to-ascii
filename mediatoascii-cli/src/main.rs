@@ -1,12 +1,8 @@
 use clap::{ArgGroup, Parser};
 
-use crate::image::{process_image, ImageConfigBuilder};
-use crate::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;
-use crate::video::{process_video, VideoConfigBuilder};
-
-mod image;
-mod util;
-mod video;
+use mediatoascii::image::{process_image, ImageConfigBuilder};
+use mediatoascii::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;
+use mediatoascii::video::{process_video, VideoConfigBuilder};
 
 /// Converts media (images and videos) to ascii, and displays output either as an output media file
 /// or in the terminal.
