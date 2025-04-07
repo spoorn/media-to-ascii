@@ -70,6 +70,7 @@ jobs:
       - name: Prepare Artifacts
         run: |
           export MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
+          mv target/release/mediatoascii-cli target/release/mediatoascii
           chmod +x target/release/mediatoascii
           mv codecs/libopenh264-1.8.0-linux64.4.so target/release/
           tar -czvf mediatoascii-x86_64-unknown-linux-gnu-$MEDIATOASCII_VERSION.tar.gz -C target/release/ mediatoascii libopenh264-1.8.0-linux64.4.so
@@ -146,6 +147,7 @@ jobs:
       - name: Prepare Artifacts
         run: |
           export MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
+          mv target/release/mediatoascii-cli target/release/mediatoascii
           chmod +x target/release/mediatoascii
           mv codecs/libopenh264-1.8.0-osx64.4.dylib target/release/
           zip -j mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.zip target/release/mediatoascii target/release/libopenh264-1.8.0-osx64.4.dylib
@@ -246,6 +248,7 @@ jobs:
       - name: Prepare Artifacts
         run: |
           $env:MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
+          Rename-Item -Path "target\release\mediatoascii-cli.exe" -NewName "mediatoascii.exe"
           Compress-Archive -Path target/release/mediatoascii.exe -Destination ./mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip 
           Compress-Archive -Path codecs/openh264-1.8.0-win64.dll -Update -Destination ./mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip 
 
