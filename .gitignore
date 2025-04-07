@@ -10,3 +10,6 @@
 **/*.rs.bk
 
 .idea
+
+# mp4 output for testing
+output.mp4
