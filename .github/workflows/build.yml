@@ -251,7 +251,7 @@ jobs:
       # Ready artifacts for upload
       - name: Prepare Artifacts
         run: |
-          $env:MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml)
+          $MEDIATOASCII_VERSION = perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' Cargo.toml
           Rename-Item -Path "target\release\mediatoascii-cli.exe" -NewName "mediatoascii.exe"
           Compress-Archive -Path target/release/mediatoascii.exe -Destination ./mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip 
           Compress-Archive -Path codecs/openh264-1.8.0-win64.dll -Update -Destination ./mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip 
