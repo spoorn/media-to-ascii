@@ -31,6 +31,10 @@ jobs:
       - name: Install rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
+      # Install Tauri dependencies
+      - name: Install Tauri dependencies
+        run: sudo apt update && sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
       # Install opencv
       #- name: Install opencv
       #  run: sudo apt install libopencv-dev clang libclang-dev
