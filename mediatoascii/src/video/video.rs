@@ -151,13 +151,13 @@ pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_wri
 /// References https://github.com/luketio/asciiframe/blob/7f23d8843278ad9cd4b53ff7110005aceeec1fcb/src/renderer.rs#L69.
 pub fn process_video(config: VideoConfig) -> VideoResult<()> {
     let video_path = config.video_path.as_str();
-    check_valid_file(video_path);
+    check_valid_file(video_path).map_err(|e| Error::FileError(e))?;
 
     let output_video_path = config.output_video_path.as_ref();
     let output_video_file: bool = output_video_path.is_some();
 
     if output_video_file {
-        check_file_exists(output_video_path.unwrap(), config.overwrite);
+        check_file_exists(output_video_path.unwrap(), config.overwrite).map_err(|e| Error::FileError(e))?;
     }
 
     let mut capture = videoio::VideoCapture::from_file(video_path, CAP_ANY)

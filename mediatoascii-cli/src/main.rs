@@ -117,7 +117,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let config = config_builder.build().unwrap();
-        process_image(config);
+        process_image(config)?;
     } else if let Some(video_path) = cli.video_path {
         let mut config_builder = VideoConfigBuilder::default();
         config_builder

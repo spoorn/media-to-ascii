@@ -1,35 +1,29 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-
-import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { computed, ref, watch } from "vue";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { openPath as openExternally } from "@tauri-apps/plugin-opener";
-import { defaultVideoConfig, type VideoConfig } from "./video";
+import { openPath } from "@tauri-apps/plugin-opener";
+import { invoke } from "@tauri-apps/api/core";
+import { defaultImageConfig, type ImageConfig } from "./image";
 
-const STORAGE_KEY = "mediatoascii:video-config";
+const STORAGE_KEY = "mediatoascii:image-config";
 
-const config = ref<VideoConfig>(loadPersistedConfig());
+const config = ref<ImageConfig>(loadPersistedConfig());
+const status = ref<"idle" | "processing" | "done" | "error">("idle");
+const statusDetail = ref("Ready to process an image");
 const processError = ref<string | null>(null);
 const processing = ref(false);
-const progress = ref(0);
-const status = ref<"idle" | "processing" | "done" | "error">("idle");
-const statusDetail = ref("Waiting to start");
-const outputPath = ref<string | null>(null);
-const startedAt = ref<number | null>(null);
-const progressListener = ref<UnlistenFn | null>(null);
-const progressWatcherRunning = ref(false);
+const outputs = ref<string[]>([]);
 
-function loadPersistedConfig(): VideoConfig {
+function loadPersistedConfig(): ImageConfig {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
-      return { ...defaultVideoConfig(), ...JSON.parse(saved) };
+      return { ...defaultImageConfig(), ...JSON.parse(saved) };
     } catch (_) {
-      return defaultVideoConfig();
+      return defaultImageConfig();
     }
   }
-  return defaultVideoConfig();
+  return defaultImageConfig();
 }
 
 watch(
@@ -40,36 +34,13 @@ watch(
   { deep: true }
 );
 
-onMounted(async () => {
-  await attachProgressListener();
-});
-
-onUnmounted(() => {
-  if (progressListener.value) {
-    progressListener.value();
-  }
-});
-
-async function attachProgressListener() {
-  if (progressListener.value) return;
-  progressListener.value = await listen<number>("video-progress", (event) => {
-    progress.value = Math.min(100, Math.floor(event.payload * 100));
-    if (progress.value >= 100 && status.value === "processing") {
-      statusDetail.value = "Finishing up...";
-    }
-  });
-}
-
 const validationErrors = computed(() => {
   const errors: string[] = [];
-  if (!config.value.video_path.trim()) {
-    errors.push("Input video is required.");
+  if (!config.value.image_path.trim()) {
+    errors.push("Input image is required.");
   }
-  if (
-    !config.value.output_video_path ||
-    config.value.output_video_path.trim().length === 0
-  ) {
-    errors.push("Output video path is required (MP4).");
+  if (!config.value.output_file_path && !config.value.output_image_path) {
+    errors.push("Choose at least one output: text file or image file.");
   }
   if (config.value.scale_down <= 0) {
     errors.push("Scale down must be greater than 0.");
@@ -80,14 +51,6 @@ const validationErrors = computed(() => {
   if (config.value.height_sample_scale <= 0) {
     errors.push("Height sample scale must be greater than 0.");
   }
-  if (config.value.max_fps <= 0) {
-    errors.push("Max FPS must be greater than 0.");
-  }
-  if (config.value.rotate !== -1 && ![0, 1, 2].includes(config.value.rotate)) {
-    errors.push(
-      "Rotate must be -1 (no rotate), 0 (90 CW), 1 (180), or 2 (90 CCW)."
-    );
-  }
   return errors;
 });
 
@@ -95,79 +58,85 @@ const canSubmit = computed(
   () => !processing.value && validationErrors.value.length === 0
 );
 
-async function pickVideoFile() {
+async function pickImage() {
   const selected = await openDialog({
     multiple: false,
-    filters: [{ name: "Videos", extensions: ["mp4", "mov", "avi", "mkv"] }],
+    filters: [
+      {
+        name: "Images",
+        extensions: ["png", "jpg", "jpeg", "gif", "bmp", "webp"],
+      },
+    ],
   });
   if (typeof selected === "string") {
-    config.value.video_path = selected;
+    config.value.image_path = selected;
   }
 }
 
-async function pickOutputFile() {
+async function pickTextOutput() {
   const selected = await openDialog({
     directory: true,
     multiple: false,
-    defaultPath: config.value.output_video_path
-      ? config.value.output_video_path.substring(
+    defaultPath: config.value.output_file_path
+      ? config.value.output_file_path.substring(
           0,
-          config.value.output_video_path.lastIndexOf("/")
+          config.value.output_file_path.lastIndexOf("/")
         )
       : undefined,
   });
   if (typeof selected === "string") {
-    // Check if path ends with separator, if not add it
     const separator = selected.includes("\\") ? "\\" : "/";
     const path = selected.endsWith(separator) ? selected : selected + separator;
-    config.value.output_video_path = path + "output.mp4";
+    config.value.output_file_path = path + "output.txt";
   }
 }
 
-async function openOutput() {
-  if (!outputPath.value) return;
-  try {
-    await openExternally(outputPath.value);
-  } catch (err) {
-    console.error("Could not open output file", err);
+async function pickImageOutput() {
+  const selected = await openDialog({
+    directory: true,
+    multiple: false,
+    defaultPath: config.value.output_image_path
+      ? config.value.output_image_path.substring(
+          0,
+          config.value.output_image_path.lastIndexOf("/")
+        )
+      : undefined,
+  });
+  if (typeof selected === "string") {
+    const separator = selected.includes("\\") ? "\\" : "/";
+    const path = selected.endsWith(separator) ? selected : selected + separator;
+    config.value.output_image_path = path + "output.png";
   }
 }
 
-function resetState() {
-  processError.value = null;
+function resetStatus() {
   status.value = "idle";
-  statusDetail.value = "Waiting to start";
-  progress.value = 0;
-  outputPath.value = null;
-  startedAt.value = null;
+  statusDetail.value = "Ready to process an image";
+  processError.value = null;
+  outputs.value = [];
 }
 
-async function processVideo() {
+async function processImage() {
   processError.value = null;
   status.value = "processing";
-  statusDetail.value = "Preparing video...";
-  progress.value = 0;
-  outputPath.value = null;
-  startedAt.value = Date.now();
+  statusDetail.value = "Converting image...";
+  outputs.value = [];
 
-  const payload: VideoConfig = {
+  const payload: ImageConfig = {
     ...config.value,
-    output_video_path: config.value.output_video_path?.trim() || null,
+    output_file_path: config.value.output_file_path?.trim() || null,
+    output_image_path: config.value.output_image_path?.trim() || null,
   };
 
   processing.value = true;
   try {
-    if (!progressWatcherRunning.value) {
-      progressWatcherRunning.value = true;
-      invoke("video_progress").finally(() => {
-        progressWatcherRunning.value = false;
-      });
-    }
-    await invoke("process_video", { config: payload });
-    progress.value = 100;
+    await invoke("process_image", { config: payload });
     status.value = "done";
-    statusDetail.value = "Finished writing output";
-    outputPath.value = payload.output_video_path ?? null;
+    statusDetail.value = "ASCII image ready";
+    outputs.value = [
+      payload.output_file_path,
+      payload.output_image_path,
+    ].filter(Boolean) as string[];
   } catch (error: any) {
     processError.value = error?.message || String(error);
     status.value = "error";
@@ -177,14 +146,13 @@ async function processVideo() {
   }
 }
 
-const elapsedText = computed(() => {
-  if (!startedAt.value) return null;
-  const ms = Date.now() - startedAt.value;
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s elapsed`;
-  const minutes = Math.floor(seconds / 60);
-  return `${minutes}m ${seconds % 60}s elapsed`;
-});
+async function openOutput(path: string) {
+  try {
+    await openPath(path);
+  } catch (err) {
+    console.error("Could not open output file", err);
+  }
+}
 </script>
 
 <template>
@@ -192,10 +160,10 @@ const elapsedText = computed(() => {
     <!-- Header Section -->
     <div class="flex flex-col gap-2">
       <h2 class="text-2xl font-bold text-white tracking-tight neon-text">
-        Video Processing
+        Image Processing
       </h2>
       <p class="text-slate-400">
-        Transform video clips into high-framerate ASCII art.
+        Convert static imagery into detailed ASCII representations.
       </p>
     </div>
 
@@ -216,12 +184,12 @@ const elapsedText = computed(() => {
           <div class="flex justify-between items-center">
             <label
               class="text-xs font-semibold text-slate-300 uppercase tracking-wider"
-              >Input Video</label
+              >Input Image</label
             >
             <button
               type="button"
               class="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
-              @click="pickVideoFile"
+              @click="pickImage"
               :disabled="processing"
             >
               BROWSE FILES
@@ -229,9 +197,9 @@ const elapsedText = computed(() => {
           </div>
           <div class="relative group">
             <input
-              v-model="config.video_path"
+              v-model="config.image_path"
               :disabled="processing"
-              placeholder="Select video..."
+              placeholder="Select image..."
               class="glass-input w-full rounded-lg px-4 py-3 text-sm placeholder-slate-500"
             />
             <div
@@ -240,32 +208,64 @@ const elapsedText = computed(() => {
           </div>
         </div>
 
-        <!-- Output -->
-        <div class="space-y-2">
-          <div class="flex justify-between items-center">
-            <label
-              class="text-xs font-semibold text-slate-300 uppercase tracking-wider"
-              >Output Path</label
-            >
-            <button
-              type="button"
-              class="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
-              @click="pickOutputFile"
-              :disabled="processing"
-            >
-              CHOOSE FOLDER
-            </button>
+        <!-- Outputs -->
+        <div class="space-y-4">
+          <!-- Text Output -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <label
+                class="text-xs font-semibold text-slate-300 uppercase tracking-wider"
+                >Text Output (Optional)</label
+              >
+              <button
+                type="button"
+                class="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                @click="pickTextOutput"
+                :disabled="processing"
+              >
+                CHOOSE FOLDER
+              </button>
+            </div>
+            <div class="relative group">
+              <input
+                v-model="config.output_file_path"
+                :disabled="processing"
+                placeholder="/path/to/output.txt"
+                class="glass-input w-full rounded-lg px-4 py-3 text-sm placeholder-slate-500"
+              />
+              <div
+                class="absolute inset-0 rounded-lg ring-1 ring-white/10 pointer-events-none group-hover:ring-white/20 transition-all"
+              ></div>
+            </div>
           </div>
-          <div class="relative group">
-            <input
-              v-model="config.output_video_path"
-              :disabled="processing"
-              placeholder="/path/to/output.mp4"
-              class="glass-input w-full rounded-lg px-4 py-3 text-sm placeholder-slate-500"
-            />
-            <div
-              class="absolute inset-0 rounded-lg ring-1 ring-white/10 pointer-events-none group-hover:ring-white/20 transition-all"
-            ></div>
+
+          <!-- Image Output -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <label
+                class="text-xs font-semibold text-slate-300 uppercase tracking-wider"
+                >Image Output (Optional)</label
+              >
+              <button
+                type="button"
+                class="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                @click="pickImageOutput"
+                :disabled="processing"
+              >
+                CHOOSE FOLDER
+              </button>
+            </div>
+            <div class="relative group">
+              <input
+                v-model="config.output_image_path"
+                :disabled="processing"
+                placeholder="/path/to/output.png"
+                class="glass-input w-full rounded-lg px-4 py-3 text-sm placeholder-slate-500"
+              />
+              <div
+                class="absolute inset-0 rounded-lg ring-1 ring-white/10 pointer-events-none group-hover:ring-white/20 transition-all"
+              ></div>
+            </div>
           </div>
         </div>
 
@@ -286,23 +286,6 @@ const elapsedText = computed(() => {
             <span
               class="text-sm text-slate-300 group-hover:text-white transition-colors"
               >Overwrite existing</span
-            >
-          </label>
-          <label class="flex items-center gap-3 cursor-pointer group">
-            <div class="relative flex items-center">
-              <input
-                type="checkbox"
-                v-model="config.use_max_fps_for_output_video"
-                :disabled="processing"
-                class="peer sr-only"
-              />
-              <div
-                class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-600"
-              ></div>
-            </div>
-            <span
-              class="text-sm text-slate-300 group-hover:text-white transition-colors"
-              >Force Max FPS</span
             >
           </label>
         </div>
@@ -344,9 +327,9 @@ const elapsedText = computed(() => {
               class="glass-input w-full rounded-lg px-3 py-2 text-sm"
             />
           </label>
-          <label class="space-y-2">
+          <label class="space-y-2 col-span-2">
             <span class="text-xs font-semibold text-slate-400"
-              >Height Sample</span
+              >Height Sample Scale</span
             >
             <input
               type="number"
@@ -356,35 +339,6 @@ const elapsedText = computed(() => {
               :disabled="processing"
               class="glass-input w-full rounded-lg px-3 py-2 text-sm"
             />
-          </label>
-          <label class="space-y-2">
-            <span class="text-xs font-semibold text-slate-400">Max FPS</span>
-            <input
-              type="number"
-              step="1"
-              min="1"
-              v-model.number="config.max_fps"
-              :disabled="processing"
-              class="glass-input w-full rounded-lg px-3 py-2 text-sm"
-            />
-          </label>
-        </div>
-
-        <div class="pt-2">
-          <label class="space-y-2 block">
-            <span class="text-xs font-semibold text-slate-400">Rotation</span>
-            <select
-              v-model.number="config.rotate"
-              :disabled="processing"
-              class="glass-input w-full rounded-lg px-3 py-2 text-sm appearance-none cursor-pointer"
-            >
-              <option :value="-1" class="bg-slate-900">No rotation</option>
-              <option :value="0" class="bg-slate-900">90° Clockwise</option>
-              <option :value="1" class="bg-slate-900">180°</option>
-              <option :value="2" class="bg-slate-900">
-                90° Counter-Clockwise
-              </option>
-            </select>
           </label>
         </div>
 
@@ -429,16 +383,6 @@ const elapsedText = computed(() => {
                 {{ statusDetail }}
               </p>
             </div>
-            <span v-if="elapsedText" class="text-xs font-mono text-cyan-400">{{
-              elapsedText
-            }}</span>
-          </div>
-
-          <div class="relative h-2 bg-slate-800 rounded-full overflow-hidden">
-            <div
-              class="absolute top-0 left-0 h-full bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(6,182,212,0.5)]"
-              :style="{ width: `${progress}%` }"
-            ></div>
           </div>
 
           <div
@@ -448,20 +392,23 @@ const elapsedText = computed(() => {
             {{ processError }}
           </div>
 
-          <div
-            v-if="outputPath && status === 'done'"
-            class="flex items-center gap-3 text-xs bg-emerald-900/20 border border-emerald-900/50 p-2 rounded text-emerald-300"
-          >
-            <span class="font-semibold">SAVED:</span>
-            <span class="truncate flex-1 font-mono opacity-80">{{
-              outputPath
-            }}</span>
-            <button
-              @click="openOutput"
-              class="hover:text-white underline decoration-emerald-500/50 hover:decoration-emerald-500"
+          <div v-if="outputs.length" class="space-y-2">
+            <div
+              v-for="out in outputs"
+              :key="out"
+              class="flex items-center gap-3 text-xs bg-emerald-900/20 border border-emerald-900/50 p-2 rounded text-emerald-300"
             >
-              OPEN
-            </button>
+              <span class="font-semibold">SAVED:</span>
+              <span class="truncate flex-1 font-mono opacity-80">{{
+                out
+              }}</span>
+              <button
+                @click="openOutput(out)"
+                class="hover:text-white underline decoration-emerald-500/50 hover:decoration-emerald-500"
+              >
+                OPEN
+              </button>
+            </div>
           </div>
 
           <div
@@ -478,7 +425,7 @@ const elapsedText = computed(() => {
           <button
             type="button"
             class="btn-secondary px-6 py-3 rounded-lg font-bold text-sm tracking-wide"
-            @click="resetState"
+            @click="resetStatus"
             :disabled="processing"
           >
             RESET
@@ -487,7 +434,7 @@ const elapsedText = computed(() => {
             type="button"
             class="btn-primary flex-1 md:flex-none px-8 py-3 rounded-lg shadow-lg shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="!canSubmit"
-            @click="processVideo"
+            @click="processImage"
           >
             {{ processing ? "PROCESSING..." : "INITIATE" }}
           </button>
