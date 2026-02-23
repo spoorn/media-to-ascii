@@ -12,15 +12,19 @@ use mediatoascii::video::{VideoConfigBuilder, process_video};
     ArgGroup::new("input_path")
         .required(true)
         .multiple(false)
-        .args(&["image_path", "video_path"]),
+        .args(&["image_path", "video_path", "camera_index"]),
 ))]
 struct Cli {
-    /// Input Image file.  One of image_path, or video_path must be populated.
+    /// Input Image file.  One of image_path, video_path, or camera_index must be populated.
     #[clap(long, value_parser)]
     image_path: Option<String>,
-    /// Input Video file.  One of image_path, or video_path must be populated.
+    /// Input Video file.  One of image_path, video_path, or camera_index must be populated.
     #[clap(long, value_parser)]
     video_path: Option<String>,
+    /// Camera device index for live feed (0 = default camera, 1 = second camera, etc.).
+    /// One of image_path, video_path, or camera_index must be populated.
+    #[clap(long, value_parser)]
+    camera_index: Option<i32>,
     /// Multiplier to scale down input dimensions by when converting to ASCII.  For large frames,
     /// recommended to scale down more so output file size is more reasonable.  Affects output quality.
     /// Note: the output dimensions will also depend on the `font-size` setting.
@@ -118,10 +122,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let config = config_builder.build().unwrap();
         process_image(config);
-    } else if let Some(video_path) = cli.video_path {
+    } else if cli.video_path.is_some() || cli.camera_index.is_some() {
         let mut config_builder = VideoConfigBuilder::default();
         config_builder
-            .video_path(video_path)
+            .video_path(cli.video_path.unwrap_or_default())
+            .camera_index(cli.camera_index)
             .scale_down(cli.scale_down)
             .font_size(cli.font_size)
             .invert(cli.invert)
@@ -143,7 +148,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let config = config_builder.build().unwrap();
         process_video(config)?;
     } else {
-        panic!("Either image-path or video-path must be provided!");
+        panic!("Either image-path, video-path, or camera-index must be provided!");
     }
 
     Ok(())

@@ -1,0 +1,6 @@
+[env]
+LIBCLANG_PATH = "/opt/homebrew/opt/llvm/lib"
+DYLD_FALLBACK_LIBRARY_PATH = "/opt/homebrew/opt/llvm/lib"
+
+[build]
+rustflags = ["-C", "link-arg=-Wl,-rpath,/opt/homebrew/opt/llvm/lib"]

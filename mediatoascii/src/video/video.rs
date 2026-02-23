@@ -29,6 +29,9 @@ pub type VideoResult<T> = Result<T, crate::video::errors::Error>;
 pub struct VideoConfig {
     /// Input Video file
     video_path: String,
+    /// Camera index for live camera feed (0 = default camera, 1 = second camera, etc.)
+    /// If set, video_path is ignored and live camera feed is used instead
+    camera_index: Option<i32>,
     /// Multiplier to scale down input dimensions by when converting to ASCII.  For large frames,
     /// recommended to scale down more so output file size is more reasonable.  Affects output quality.
     /// Note: the output dimensions will also depend on the `font-size` setting.
@@ -69,6 +72,7 @@ impl Default for VideoConfig {
     fn default() -> Self {
         VideoConfig {
             video_path: "".to_string(),
+            camera_index: None,
             scale_down: 1.0,
             font_size: 12.0,
             height_sample_scale: MAGIC_HEIGHT_TO_WIDTH_RATIO,
@@ -150,9 +154,6 @@ pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_wri
 ///
 /// References https://github.com/luketio/asciiframe/blob/7f23d8843278ad9cd4b53ff7110005aceeec1fcb/src/renderer.rs#L69.
 pub fn process_video(config: VideoConfig) -> VideoResult<()> {
-    let video_path = config.video_path.as_str();
-    check_valid_file(video_path);
-
     let output_video_path = config.output_video_path.as_ref();
     let output_video_file: bool = output_video_path.is_some();
 
@@ -160,11 +161,27 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
         check_file_exists(output_video_path.unwrap(), config.overwrite);
     }
 
-    let mut capture = videoio::VideoCapture::from_file(video_path, CAP_ANY)
-        .unwrap_or_else(|_| panic!("Could not open video file at {video_path}"));
-    let num_frames = capture.get(videoio::CAP_PROP_FRAME_COUNT).unwrap() as u64;
-    let orig_fps = capture.get(videoio::CAP_PROP_FPS).unwrap();
-    let frame_time = 1.0 / orig_fps;
+    // Determine if we're using camera or file input
+    let is_camera_mode = config.camera_index.is_some();
+
+    let mut capture = if let Some(camera_idx) = config.camera_index {
+        println!("Opening camera device {}...", camera_idx);
+        videoio::VideoCapture::new(camera_idx, CAP_ANY)
+            .unwrap_or_else(|_| panic!("Could not open camera device {}", camera_idx))
+    } else {
+        let video_path = config.video_path.as_str();
+        check_valid_file(video_path);
+        videoio::VideoCapture::from_file(video_path, CAP_ANY)
+            .unwrap_or_else(|_| panic!("Could not open video file at {video_path}"))
+    };
+
+    let num_frames = if is_camera_mode {
+        u64::MAX  // Infinite for camera mode
+    } else {
+        capture.get(videoio::CAP_PROP_FRAME_COUNT).unwrap() as u64
+    };
+
+    let orig_fps = capture.get(videoio::CAP_PROP_FPS).unwrap_or(30.0);
 
     let stdout = io::stdout();
     let mut handle = stdout.lock();
@@ -178,22 +195,47 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
     let should_rotate = config.rotate > -1 && config.rotate < 3;
 
     if output_video_file {
-        println!("Encoding video from {} to ascii video at {}", video_path, output_video_path.unwrap());
+        let source = if is_camera_mode {
+            format!("camera {}", config.camera_index.unwrap())
+        } else {
+            config.video_path.clone()
+        };
+        println!("Encoding {} to ascii video at {}", source, output_video_path.unwrap());
+    } else if is_camera_mode {
+        println!("Starting live camera feed (Press Ctrl+C to stop)...");
     }
 
-    let progressbar = ProgressBar::new(num_frames);
+    let progressbar = if is_camera_mode {
+        ProgressBar::hidden()
+    } else {
+        ProgressBar::new(num_frames)
+    };
 
-    for i in 0..num_frames {
-        println!("Processing frame {i} of {num_frames}");
+    let mut frame_count = 0u64;
+    loop {
+        if !is_camera_mode && frame_count >= num_frames {
+            break;
+        }
+
+        if is_camera_mode && frame_count % 100 == 0 {
+            println!("Processed {} frames", frame_count);
+        }
+
         let start = SystemTime::now();
         let mut frame = UnsafeMat(Mat::default());
 
         // CV_8UC3
         // TODO: error handling
-        let read = capture.read(&mut frame.0).expect("Could not read frame of video");
+        let read = capture.read(&mut frame.0).expect("Could not read frame");
         if !read {
-            eprintln!("Error reading frame {} from input video.  Skipping frame and continuing...", i);
-            continue;
+            if is_camera_mode {
+                eprintln!("Error reading frame from camera. Exiting...");
+                break;
+            } else {
+                eprintln!("Error reading frame {} from input video. Skipping frame and continuing...", frame_count);
+                frame_count += 1;
+                continue;
+            }
         }
 
         // Rotate
@@ -206,7 +248,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
         if output_video_file {
             // Write to video file
 
-            if i == 0 {
+            if frame_count == 0 {
                 // Initialize VideoWriter for real
                 output_frame_size = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
                 // Openh264 codec seems to have this dimension limitation so we cap it
@@ -228,11 +270,15 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                 .unwrap();
             }
 
-            progressbar.inc(1);
-            unsafe {
-                PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
+            if !is_camera_mode {
+                progressbar.inc(1);
+                unsafe {
+                    PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
+                }
             }
-            if config.use_max_fps_for_output_video && i % frame_cut == 0 {
+
+            if config.use_max_fps_for_output_video && frame_count % frame_cut == 0 {
+                frame_count += 1;
                 continue;
             }
 
@@ -240,28 +286,37 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
         } else {
             // Write to terminal
 
-            if i % frame_cut == 0 {
+            if frame_count % frame_cut == 0 {
                 let ascii_str = ascii_to_str(&ascii);
                 write!(handle, "{}", clear_command).unwrap();
                 write!(handle, "{}", ascii_str).unwrap();
+                handle.flush().unwrap();
             }
 
             let elapsed = start.elapsed().unwrap().as_secs_f64();
-            if elapsed < frame_time {
-                sleep(Duration::from_millis(((frame_time - elapsed) * 1000.0) as u64));
+            let target_frame_time = 1.0 / config.max_fps as f64;
+            if elapsed < target_frame_time {
+                sleep(Duration::from_millis(((target_frame_time - elapsed) * 1000.0) as u64));
             }
         }
+
+        frame_count += 1;
     }
 
     // Writes the video explicitly just for clarity
     video_writer.release().unwrap();
-    progressbar.finish();
-    unsafe {
-        PROGRESS_PERCENTAGE = 1.0;
+
+    if !is_camera_mode {
+        progressbar.finish();
+        unsafe {
+            PROGRESS_PERCENTAGE = 1.0;
+        }
     }
 
     if output_video_file {
         println!("Finished writing output video file to {}", output_video_path.unwrap());
+    } else if is_camera_mode {
+        println!("\nCamera feed stopped. Processed {} frames total.", frame_count);
     }
 
     Ok(())
