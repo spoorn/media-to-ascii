@@ -1,35 +1,52 @@
 <script setup lang="ts">
+import { ref, provide } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 import Video from "./video/Video.vue";
+import ProgressBar from 'primevue/progressbar';
+import Button from 'primevue/button';
+
+interface VideoProgress {
+    percentage: number;
+    currentFrame: number;
+    totalFrames: number;
+}
+
+const processing = ref(false);
+const progress = ref<VideoProgress>({ percentage: 0, currentFrame: 0, totalFrames: 0 });
+
+provide('processing', processing);
+provide('progress', progress);
+
+async function cancelProcessing() {
+    await invoke('cancel_processing');
+}
 </script>
 
 <template>
-  <div class="settings mx-auto p-4">
-    <Video/>
-    <!--    <h1>Welcome to Tauri + Vue</h1>-->
-
-    <!--    <div class="row">-->
-    <!--      <a href="https://vitejs.dev" target="_blank">-->
-    <!--        <img src="/vite.svg" class="logo vite" alt="Vite logo" />-->
-    <!--      </a>-->
-    <!--      <a href="https://tauri.app" target="_blank">-->
-    <!--        <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />-->
-    <!--      </a>-->
-    <!--      <a href="https://vuejs.org/" target="_blank">-->
-    <!--        <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />-->
-    <!--      </a>-->
-    <!--    </div>-->
-    <!--    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>-->
-
-    <!--    <form class="row" @submit.prevent="greet">-->
-    <!--      <input id="greet-input" v-model="name" placeholder="Enter a name..." />-->
-    <!--      <button type="submit">Greet</button>-->
-    <!--    </form>-->
-    <!--    <p>{{ greetMsg }}</p>-->
+  <div class="app-container">
+    <div class="settings mx-auto">
+      <Video/>
+    </div>
+    <div v-if="processing" class="progress-container">
+      <div class="progress-content">
+        <div class="flex-1">
+          <ProgressBar :value="progress.percentage" class="h-3" />
+          <p v-if="progress.totalFrames > 0" class="text-sm text-gray-500 mt-1">
+            Frame {{ progress.currentFrame }} of {{ progress.totalFrames }}
+          </p>
+        </div>
+        <Button
+          label="Cancel"
+          severity="danger"
+          size="small"
+          @click="cancelProcessing"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-
 </style>
 <style>
 :root {
@@ -48,13 +65,39 @@ import Video from "./video/Video.vue";
   -webkit-text-size-adjust: 100%;
 }
 
-.settings {
-  margin: 0;
-  padding-top: 10vh;
+.app-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  min-height: 100vh;
+  height: 100%;
+}
+
+.settings {
+  flex: 1;
+  margin: 0;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
   text-align: center;
+  width: 100%;
+  overflow-y: auto;
+}
+
+.progress-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.75rem 1rem;
+  background: #f6f6f6;
+  border-top: 1px solid #ccc;
+  z-index: 100;
+}
+
+.progress-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   width: 100%;
 }
 
@@ -104,10 +147,6 @@ button {
   outline: none;
 }
 
-#greet-input {
-  margin-right: 5px;
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
@@ -128,5 +167,4 @@ button {
     background-color: #0f0f0f69;
   }
 }
-
 </style>

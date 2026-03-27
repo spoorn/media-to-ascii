@@ -1,67 +1,288 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { defaultVideoConfig } from "./video.ts";
+import { ref, inject, type Ref } from "vue";
+import { defaultVideoConfig, rotateOptions } from "./video.ts";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import ProgressBar from 'primevue/progressbar';
+import { open, save, confirm } from "@tauri-apps/plugin-dialog";
+import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
+import Select from 'primevue/select';
+import Checkbox from 'primevue/checkbox';
+import ToggleButton from 'primevue/togglebutton';
+import Button from 'primevue/button';
 
-const config = ref(defaultVideoConfig());
-const processError = ref(null);
-const processing = ref(false);
-const progress = ref(0.0);
-
-async function processVideo() {
-  processError.value = null;
-  processing.value = true;
-  invoke('video_progress')
-      .then(() => {
-        console.log('Video progress done');
-      });
-  invoke('process_video', {config: config.value})
-      .then(() => {
-        console.log('Video processing done');
-        processing.value = false;
-        progress.value = 1.0;
-      })
-      .catch((error) => processError.value = error);
+interface VideoProgress {
+    percentage: number;
+    currentFrame: number;
+    totalFrames: number;
 }
 
-listen<number>('video-progress', (event) => {
-  progress.value = Math.floor(event.payload * 100);
+const config = ref(defaultVideoConfig());
+const processError = ref<string | null>(null);
+const processing = inject<Ref<boolean>>('processing', ref(false));
+const progress = inject<Ref<VideoProgress>>('progress', ref({ percentage: 0, currentFrame: 0, totalFrames: 0 }));
+const selectedRotate = ref(-1);
+
+async function browseInputVideo() {
+    const selected = await open({
+        multiple: false,
+        filters: [{
+            name: 'Video',
+            extensions: ['mp4', 'avi', 'mov', 'mkv', 'webm', 'wmv', 'flv', 'm4v']
+        }]
+    });
+    if (selected) {
+        config.value.video_path = selected as string;
+    }
+}
+
+async function browseOutputVideo() {
+    const selected = await save({
+        filters: [{
+            name: 'Video',
+            extensions: ['mp4']
+        }],
+        defaultPath: 'ascii_output.mp4',
+    });
+    if (selected) {
+        const exists = await invoke<boolean>('file_exists', { path: selected });
+        if (exists) {
+            const overwrite = await confirm(
+                'File already exists. Do you want to overwrite it?',
+                { title: 'Confirm Overwrite', kind: 'warning' }
+            );
+            if (!overwrite) {
+                return;
+            }
+        }
+        config.value.output_video_path = selected;
+    }
+}
+
+async function processVideo() {
+    config.value.rotate = selectedRotate.value;
+    processError.value = null;
+    processing.value = true;
+    progress.value = { percentage: 0, currentFrame: 0, totalFrames: 0 };
+
+    invoke('video_progress')
+        .then(() => {
+            console.log('Video progress done');
+        });
+
+    invoke('process_video', { config: config.value })
+        .then(() => {
+            console.log('Video processing done');
+        })
+        .catch((error) => {
+            processError.value = error as string;
+        })
+        .finally(() => {
+            processing.value = false;
+            progress.value = { percentage: 0, currentFrame: 0, totalFrames: 0 };
+        });
+}
+
+listen<{ percentage: number; current_frame: number; total_frames: number }>('video-progress', (event) => {
+    progress.value = {
+        percentage: Math.floor(event.payload.percentage * 100),
+        currentFrame: event.payload.current_frame,
+        totalFrames: event.payload.total_frames,
+    };
 });
 </script>
 
 <template>
-  <div>
-    <h1>Video Settings</h1>
+    <div class="video-settings">
+        <h1 class="text-xl font-bold mb-3 text-center">Video to ASCII Converter</h1>
 
-    <form @submit.prevent="processVideo">
-      <div>
-        <label for="video-input">Input Video Path</label>
-        <input id="video-input" :disabled="processing == true" v-model="config.video_path"
-               placeholder="input video path..."/>
-      </div>
-      <div>
-        <label for="scale-down">Scale Down</label>
-        <input id="scale-down" type="number" step="any" v-model.number="config.scale_down"/>
-      </div>
-      <div>
-        <label for="overwrite">Overwrite</label>
-        <input type="checkbox" v-model="config.overwrite" id="overwrite"/>
-      </div>
-      <div>
-        <label for="video-width">Width</label>
-        <input id="video-output" v-model="config.output_video_path" placeholder="output path..."/>
-      </div>
-      <div>
-        <button type="submit" :disabled="processing == true">Asciify</button>
-      </div>
-      <div v-if="processError" class="text-red-500">{{ processError }}</div>
-      <ProgressBar :value="progress" class="m-2"></ProgressBar>
-    </form>
-  </div>
+        <form @submit.prevent="processVideo">
+            <div class="settings-grid">
+                <div class="settings-column">
+                    <h2 class="text-base font-semibold mb-2 border-b border-gray-600 pb-1">Input Settings</h2>
+
+                    <div class="form-group">
+                        <label for="video-input" class="block mb-0.5 text-sm font-medium">Video Path</label>
+                        <div class="flex gap-2">
+                            <InputText
+                                id="video-input"
+                                v-model="config.video_path"
+                                placeholder="Select a video file..."
+                                class="flex-1"
+                                :disabled="processing"
+                            />
+                            <Button
+                                type="button"
+                                label="Browse"
+                                :disabled="processing"
+                                @click="browseInputVideo"
+                            />
+                        </div>
+                        <small class="text-gray-500">Required input video file path</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="scale-down" class="block mb-0.5 text-sm font-medium">Scale Down</label>
+                        <InputNumber
+                            id="scale-down"
+                            v-model="config.scale_down"
+                            :min="0.1"
+                            :max="100"
+                            :step="1"
+                            :minFractionDigits="1"
+                            :maxFractionDigits="2"
+                            :showButtons="true"
+                            :disabled="processing"
+                        />
+                        <small class="text-gray-500">Multiplier to scale down input dimensions</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="font-size" class="block mb-0.5 text-sm font-medium">Font Size</label>
+                        <InputNumber
+                            id="font-size"
+                            v-model="config.font_size"
+                            :min="6"
+                            :max="72"
+                            :step="1"
+                            :showButtons="true"
+                            :disabled="processing"
+                        />
+                        <small class="text-gray-500">Affects output quality and resolution</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rotate" class="block mb-0.5 text-sm font-medium">Rotate</label>
+                        <Select
+                            id="rotate"
+                            v-model="selectedRotate"
+                            :options="rotateOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            :disabled="processing"
+                            class="w-full"
+                        />
+                    </div>
+                </div>
+
+                <div class="settings-column">
+                    <h2 class="text-base font-semibold mb-2 border-b border-gray-600 pb-1">Output Settings</h2>
+
+                    <div class="form-group">
+                        <label for="video-output" class="block mb-0.5 text-sm font-medium">Output Path</label>
+                        <div class="flex gap-2">
+                            <InputText
+                                id="video-output"
+                                v-model="config.output_video_path"
+                                placeholder="Save as... (optional)"
+                                class="flex-1"
+                                :disabled="processing"
+                            />
+                            <Button
+                                type="button"
+                                label="Browse"
+                                :disabled="processing"
+                                @click="browseOutputVideo"
+                            />
+                        </div>
+                        <small class="text-gray-500">Leave empty to play in terminal</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="invert" class="block mb-0.5 text-sm font-medium">Invert</label>
+                        <ToggleButton
+                            id="invert"
+                            v-model="config.invert"
+                            onLabel="Light Background"
+                            offLabel="Dark Background"
+                            :disabled="processing"
+                            class="w-full"
+                        />
+                        <small class="text-gray-500">For light backgrounds, use inverted colors</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="use-max-fps" class="block mb-0.5 text-sm font-medium">Use Max FPS for Output</label>
+                        <div class="flex items-center gap-2">
+                            <Checkbox v-model="config.use_max_fps_for_output_video" :binary="true" :disabled="processing" />
+                            <label for="use-max-fps" class="text-sm">Apply max FPS setting to video file output</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="max-fps" class="block mb-0.5 text-sm font-medium">Max FPS</label>
+                        <InputNumber
+                            id="max-fps"
+                            v-model="config.max_fps"
+                            :min="1"
+                            :max="120"
+                            :step="1"
+                            :disabled="processing"
+                        />
+                        <small class="text-gray-500">Maximum frames per second for terminal playback</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <Button
+                    type="submit"
+                    label="Asciify"
+                    :loading="processing"
+                    :disabled="!config.video_path || processing"
+                    class="w-full"
+                    size="large"
+                />
+            </div>
+
+            <div v-if="processError" class="mt-4 p-3 bg-red-900/50 border border-red-700 rounded text-red-300">
+                {{ processError }}
+            </div>
+        </form>
+    </div>
 </template>
 
 <style scoped>
+.video-settings {
+    padding: 0.25rem;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
 
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+@media (max-width: 700px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.settings-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.form-group :deep(.p-inputnumber),
+.form-group :deep(.p-select),
+.form-group :deep(.p-inputtext) {
+    width: 100%;
+}
+
+.form-group .flex.items-center.gap-2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
 </style>

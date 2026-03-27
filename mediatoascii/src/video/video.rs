@@ -9,18 +9,27 @@ use crate::util::constants::{
     WHITE_BGR_SCALAR,
 };
 use crate::util::file_util::{check_file_exists, check_valid_file};
-use crate::util::{UnsafeMat, ascii_to_str, get_size_from_ascii};
+use crate::util::{ascii_to_str, get_size_from_ascii, UnsafeMat};
 use crate::video::errors::Error;
 use derive_builder::Builder;
 use indicatif::ProgressBar;
-use opencv::core::{CV_8UC3, Mat, MatTraitConst, MatTraitManual, Size, Vec3b};
+use opencv::core::{Mat, MatTraitConst, MatTraitManual, Size, Vec3b, CV_8UC3};
 use opencv::videoio;
-use opencv::videoio::{CAP_ANY, VideoCaptureTrait, VideoCaptureTraitConst, VideoWriter, VideoWriterTrait};
+use opencv::videoio::{VideoCaptureTrait, VideoCaptureTraitConst, VideoWriter, VideoWriterTrait, CAP_ANY};
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use serde::Deserialize;
 
 /// We track progress percentage in a global static mut as we only support 1 job at a time right now
 pub static mut PROGRESS_PERCENTAGE: f32 = 0.0;
+
+/// Current frame being processed
+pub static mut CURRENT_FRAME: u64 = 0;
+
+/// Total number of frames in the video
+pub static mut TOTAL_FRAMES: u64 = 0;
+
+/// Flag to signal cancellation of video processing
+pub static mut CANCEL_REQUESTED: bool = false;
 
 pub type VideoResult<T> = Result<T, crate::video::errors::Error>;
 
@@ -150,6 +159,13 @@ pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_wri
 ///
 /// References https://github.com/luketio/asciiframe/blob/7f23d8843278ad9cd4b53ff7110005aceeec1fcb/src/renderer.rs#L69.
 pub fn process_video(config: VideoConfig) -> VideoResult<()> {
+    // Reset cancellation flag and progress tracking
+    unsafe {
+        CANCEL_REQUESTED = false;
+        CURRENT_FRAME = 0;
+        TOTAL_FRAMES = 0;
+    }
+
     let video_path = config.video_path.as_str();
     check_valid_file(video_path);
 
@@ -163,6 +179,9 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
     let mut capture = videoio::VideoCapture::from_file(video_path, CAP_ANY)
         .unwrap_or_else(|_| panic!("Could not open video file at {video_path}"));
     let num_frames = capture.get(videoio::CAP_PROP_FRAME_COUNT).unwrap() as u64;
+    unsafe {
+        TOTAL_FRAMES = num_frames;
+    }
     let orig_fps = capture.get(videoio::CAP_PROP_FPS).unwrap();
     let frame_time = 1.0 / orig_fps;
 
@@ -184,6 +203,15 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
     let progressbar = ProgressBar::new(num_frames);
 
     for i in 0..num_frames {
+        // Check for cancellation
+        unsafe {
+            if CANCEL_REQUESTED {
+                CANCEL_REQUESTED = false;
+                return Ok(());
+            }
+            CURRENT_FRAME = i;
+        }
+
         println!("Processing frame {i} of {num_frames}");
         let start = SystemTime::now();
         let mut frame = UnsafeMat(Mat::default());

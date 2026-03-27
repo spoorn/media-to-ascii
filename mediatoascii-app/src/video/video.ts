@@ -5,7 +5,7 @@ export interface VideoConfig {
     height_sample_scale: number;
     invert: boolean;
     max_fps: number;
-    output_video_path: string;
+    output_video_path: string | null;
     overwrite: boolean;
     use_max_fps_for_output_video: boolean;
     rotate: number;
@@ -14,14 +14,26 @@ export interface VideoConfig {
 export function defaultVideoConfig(): VideoConfig {
     return {
         video_path: "",
+        output_video_path: null,
         scale_down: 1.0,
         font_size: 12.0,
         height_sample_scale: 2.046,
         invert: false,
-        max_fps: 60,
-        output_video_path: "",
-        overwrite: false,
+        max_fps: 10,
+        overwrite: true, // Always true - rely on dialog box warning when file exists
         use_max_fps_for_output_video: false,
-        rotate: 0,
+        rotate: -1,
     };
 }
+
+export interface RotateOption {
+    label: string;
+    value: number;
+}
+
+export const rotateOptions: RotateOption[] = [
+    { label: "No Rotation", value: -1 },
+    { label: "90° Clockwise", value: 0 },
+    { label: "180° Flip", value: 1 },
+    { label: "90° Counter-Clockwise", value: 2 },
+];
