@@ -190,49 +190,43 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
     let clear_command = format!("{esc}c", esc = 27 as char);
 
     let frame_cut = orig_fps as u64 / config.max_fps;
-
-    // Video output
-    let mut video_writer: VideoWriter = VideoWriter::default().unwrap();
-    let mut output_frame_size: Size = Size::default();
     let should_rotate = config.rotate > -1 && config.rotate < 3;
 
     if output_video_file {
         println!("Encoding video from {} to ascii video at {}", video_path, output_video_path.unwrap());
-    }
 
-    let progressbar = ProgressBar::new(num_frames);
+        // Video output
+        let mut video_writer: VideoWriter = VideoWriter::default().unwrap();
+        let mut output_frame_size: Size = Size::default();
+        let progressbar = ProgressBar::new(num_frames);
 
-    for i in 0..num_frames {
-        // Check for cancellation
-        unsafe {
-            if CANCEL_REQUESTED {
-                CANCEL_REQUESTED = false;
-                return Ok(());
+        for i in 0..num_frames {
+            // Check for cancellation
+            unsafe {
+                if CANCEL_REQUESTED {
+                    CANCEL_REQUESTED = false;
+                    return Ok(());
+                }
+                CURRENT_FRAME = i;
             }
-            CURRENT_FRAME = i;
-        }
 
-        println!("Processing frame {i} of {num_frames}");
-        let start = SystemTime::now();
-        let mut frame = UnsafeMat(Mat::default());
+            println!("Processing frame {i} of {num_frames}");
+            let mut frame = UnsafeMat(Mat::default());
 
-        // CV_8UC3
-        // TODO: error handling
-        let read = capture.read(&mut frame.0).expect("Could not read frame of video");
-        if !read {
-            eprintln!("Error reading frame {} from input video.  Skipping frame and continuing...", i);
-            continue;
-        }
+            // CV_8UC3
+            // TODO: error handling
+            let read = capture.read(&mut frame.0).expect("Could not read frame of video");
+            if !read {
+                eprintln!("Error reading frame {} from input video.  Skipping frame and continuing...", i);
+                return Err(Error::VideoReadError(format!("Could not read frame {i} from video"))) ;
+            }
 
-        // Rotate
-        if should_rotate {
-            opencv::core::rotate(&frame.clone(), &mut frame.0, config.rotate).unwrap();
-        }
+            // Rotate
+            if should_rotate {
+                opencv::core::rotate(&frame.clone(), &mut frame.0, config.rotate).unwrap();
+            }
 
-        let ascii = convert_opencv_video_to_ascii(&frame, &config);
-
-        if output_video_file {
-            // Write to video file
+            let ascii = convert_opencv_video_to_ascii(&frame, &config);
 
             if i == 0 {
                 // Initialize VideoWriter for real
@@ -253,7 +247,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                     output_frame_size,
                     true,
                 )
-                .unwrap();
+                    .unwrap();
             }
 
             progressbar.inc(1);
@@ -265,7 +259,38 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
             }
 
             write_to_ascii_video(&config, &ascii, &mut video_writer, &output_frame_size);
-        } else {
+        }
+
+        // Writes the video explicitly just for clarity
+        video_writer.release().unwrap();
+        progressbar.finish();
+        unsafe {
+            PROGRESS_PERCENTAGE = 1.0;
+        }
+
+        if output_video_file {
+            println!("Finished writing output video file to {}", output_video_path.unwrap());
+        }
+    } else {
+        for i in 0..num_frames {
+            let start = SystemTime::now();
+            let mut frame = UnsafeMat(Mat::default());
+
+            // CV_8UC3
+            // TODO: error handling
+            let read = capture.read(&mut frame.0).expect("Could not read frame of video");
+            if !read {
+                eprintln!("Error reading frame {} from input video.  Skipping frame and continuing...", i);
+                return Err(Error::VideoReadError(format!("Could not read frame {i} from video"))) ;
+            }
+
+            // Rotate
+            if should_rotate {
+                opencv::core::rotate(&frame.clone(), &mut frame.0, config.rotate).unwrap();
+            }
+
+            let ascii = convert_opencv_video_to_ascii(&frame, &config);
+
             // Write to terminal
 
             if i % frame_cut == 0 {
@@ -279,17 +304,6 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                 sleep(Duration::from_millis(((frame_time - elapsed) * 1000.0) as u64));
             }
         }
-    }
-
-    // Writes the video explicitly just for clarity
-    video_writer.release().unwrap();
-    progressbar.finish();
-    unsafe {
-        PROGRESS_PERCENTAGE = 1.0;
-    }
-
-    if output_video_file {
-        println!("Finished writing output video file to {}", output_video_path.unwrap());
     }
 
     Ok(())
