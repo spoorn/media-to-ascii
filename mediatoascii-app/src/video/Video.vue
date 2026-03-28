@@ -3,7 +3,7 @@ import { ref, inject, type Ref } from "vue";
 import { defaultVideoConfig, rotateOptions } from "./video.ts";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open, save, confirm } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
@@ -13,14 +13,16 @@ import Button from 'primevue/button';
 
 interface VideoProgress {
     percentage: number;
-    currentFrame: number;
+    currentReadFrame: number;
+    currentEncodeFrame: number;
+    currentWriteFrame: number;
     totalFrames: number;
 }
 
 const config = ref(defaultVideoConfig());
 const processError = ref<string | null>(null);
 const processing = inject<Ref<boolean>>('processing', ref(false));
-const progress = inject<Ref<VideoProgress>>('progress', ref({ percentage: 0, currentFrame: 0, totalFrames: 0 }));
+const progress = inject<Ref<VideoProgress>>('progress', ref({ percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 }));
 const selectedRotate = ref(-1);
 
 async function browseInputVideo() {
@@ -45,16 +47,16 @@ async function browseOutputVideo() {
         defaultPath: 'ascii_output.mp4',
     });
     if (selected) {
-        const exists = await invoke<boolean>('file_exists', { path: selected });
-        if (exists) {
-            const overwrite = await confirm(
-                'File already exists. Do you want to overwrite it?',
-                { title: 'Confirm Overwrite', kind: 'warning' }
-            );
-            if (!overwrite) {
-                return;
-            }
-        }
+        // const exists = await invoke<boolean>('file_exists', { path: selected });
+        // if (exists) {
+        //     const overwrite = await confirm(
+        //         'File already exists. Do you want to overwrite it?',
+        //         { title: 'Confirm Overwrite', kind: 'warning' }
+        //     );
+        //     if (!overwrite) {
+        //         return;
+        //     }
+        // }
         config.value.output_video_path = selected;
     }
 }
@@ -63,7 +65,7 @@ async function processVideo() {
     config.value.rotate = selectedRotate.value;
     processError.value = null;
     processing.value = true;
-    progress.value = { percentage: 0, currentFrame: 0, totalFrames: 0 };
+    progress.value = { percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 };
 
     invoke('video_progress')
         .then(() => {
@@ -79,14 +81,16 @@ async function processVideo() {
         })
         .finally(() => {
             processing.value = false;
-            progress.value = { percentage: 0, currentFrame: 0, totalFrames: 0 };
+            progress.value = { percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 };
         });
 }
 
-listen<{ percentage: number; current_frame: number; total_frames: number }>('video-progress', (event) => {
+listen<{ percentage: number; current_read_frame: number; current_encode_frame: number; current_write_frame: number; total_frames: number }>('video-progress', (event) => {
     progress.value = {
         percentage: Math.floor(event.payload.percentage * 100),
-        currentFrame: event.payload.current_frame,
+        currentReadFrame: event.payload.current_read_frame,
+        currentEncodeFrame: event.payload.current_encode_frame,
+        currentWriteFrame: event.payload.current_write_frame,
         totalFrames: event.payload.total_frames,
     };
 });
@@ -163,6 +167,20 @@ listen<{ percentage: number; current_frame: number; total_frames: number }>('vid
                             class="w-full"
                         />
                     </div>
+
+                  <div class="form-group">
+                    <label for="scale-down" class="block mb-0.5 text-sm font-medium">Num Threads</label>
+                    <InputNumber
+                        id="num-threads"
+                        v-model="config.num_threads"
+                        :min="1"
+                        :max="32"
+                        :step="1"
+                        :showButtons="true"
+                        :disabled="processing"
+                    />
+                    <small class="text-gray-500">Num Threads for parallel encoding</small>
+                  </div>
                 </div>
 
                 <div class="settings-column">

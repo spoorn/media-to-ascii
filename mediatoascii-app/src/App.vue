@@ -6,13 +6,15 @@ import ProgressBar from 'primevue/progressbar';
 import Button from 'primevue/button';
 
 interface VideoProgress {
-    percentage: number;
-    currentFrame: number;
-    totalFrames: number;
+  percentage: number;
+  currentReadFrame: number;
+  currentEncodeFrame: number;
+  currentWriteFrame: number;
+  totalFrames: number;
 }
 
 const processing = ref(false);
-const progress = ref<VideoProgress>({ percentage: 0, currentFrame: 0, totalFrames: 0 });
+const progress = ref<VideoProgress>({ percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 });
 
 provide('processing', processing);
 provide('progress', progress);
@@ -31,9 +33,25 @@ async function cancelProcessing() {
       <div class="progress-content">
         <div class="flex-1">
           <ProgressBar :value="progress.percentage" class="h-3" />
-          <p v-if="progress.totalFrames > 0" class="text-sm text-gray-500 mt-1">
-            Frame {{ progress.currentFrame }} of {{ progress.totalFrames }}
-          </p>
+          <div class="grid grid-cols-3 gap-4 text-sm text-gray-500">
+            <div>
+              <p>
+                Read Frame {{ progress.currentReadFrame }} of {{ progress.totalFrames }}
+              </p>
+            </div>
+
+            <div>
+              <p>
+                Encode Frame {{ progress.currentEncodeFrame }} of {{ progress.totalFrames }}
+              </p>
+            </div>
+
+            <div>
+              <p>
+                Write Frame {{ progress.currentWriteFrame }} of {{ progress.totalFrames }}
+              </p>
+            </div>
+          </div>
         </div>
         <Button
           label="Cancel"

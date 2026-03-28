@@ -9,13 +9,14 @@ export interface VideoConfig {
     overwrite: boolean;
     use_max_fps_for_output_video: boolean;
     rotate: number;
+    num_threads: number;
 }
 
 export function defaultVideoConfig(): VideoConfig {
     return {
         video_path: "",
         output_video_path: null,
-        scale_down: 1.0,
+        scale_down: 4.0,
         font_size: 12.0,
         height_sample_scale: 2.046,
         invert: false,
@@ -23,7 +24,17 @@ export function defaultVideoConfig(): VideoConfig {
         overwrite: true, // Always true - rely on dialog box warning when file exists
         use_max_fps_for_output_video: false,
         rotate: -1,
+        num_threads: getNumThreads(),
     };
+}
+
+export function getNumThreads() {
+    let threads = 4; // fallback
+    if (typeof navigator !== "undefined") {
+        // Running in browser/webview
+        threads = navigator.hardwareConcurrency || 4;
+    }
+    return threads;
 }
 
 export interface RotateOption {

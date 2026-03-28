@@ -6,7 +6,9 @@ use tauri::{AppHandle, Emitter};
 #[derive(Clone, Serialize)]
 struct VideoProgressInfo {
     percentage: f32,
-    current_frame: u64,
+    current_read_frame: u64,
+    current_encode_frame: u64,
+    current_write_frame: u64,
     total_frames: u64,
 }
 
@@ -26,7 +28,9 @@ async fn video_progress(app: AppHandle) {
         while mediatoascii::video::PROGRESS_PERCENTAGE < 1.0 {
             app.emit("video-progress", VideoProgressInfo {
                 percentage: mediatoascii::video::PROGRESS_PERCENTAGE,
-                current_frame: mediatoascii::video::CURRENT_FRAME,
+                current_read_frame: mediatoascii::video::READ_CURRENT_FRAME,
+                current_encode_frame: mediatoascii::video::ENCODE_CURRENT_FRAME,
+                current_write_frame: mediatoascii::video::WRITE_CURRENT_FRAME,
                 total_frames: mediatoascii::video::TOTAL_FRAMES,
             }).unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;

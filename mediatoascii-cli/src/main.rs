@@ -1,3 +1,4 @@
+use std::thread::available_parallelism;
 use clap::{ArgGroup, Parser};
 
 use mediatoascii::image::{ImageConfigBuilder, process_image};
@@ -69,6 +70,9 @@ struct Cli {
     /// Rotate the input (0 = 90 CLOCKWISE, 1 = 180, 2 = 90 COUNTER-CLOCKWISE)
     #[clap(short, long, value_parser = clap::value_parser!(i32).range(0..3))]
     rotate: Option<i32>,
+    /// Number of threads for parallel processing during encode step. [default: number of logical CPU cores]
+    #[clap(long, value_parser)]
+    num_threads: Option<u8>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -126,7 +130,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .font_size(cli.font_size)
             .invert(cli.invert)
             .overwrite(cli.overwrite)
-            .use_max_fps_for_output_video(cli.use_max_fps_for_output_video);
+            .use_max_fps_for_output_video(cli.use_max_fps_for_output_video)
+            .num_threads(cli.num_threads.unwrap_or_else(|| available_parallelism().unwrap().get() as u8));
 
         if let Some(max_fps) = cli.max_fps {
             config_builder.max_fps(max_fps);

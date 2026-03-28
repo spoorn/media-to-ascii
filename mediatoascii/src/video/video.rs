@@ -1,6 +1,6 @@
 use std::io;
 use std::io::Write;
-use std::thread::sleep;
+use std::thread::{available_parallelism, sleep};
 use std::time::{Duration, SystemTime};
 
 use crate::image::generate_ascii_image;
@@ -16,14 +16,20 @@ use indicatif::ProgressBar;
 use opencv::core::{Mat, MatTraitConst, MatTraitManual, Size, Vec3b, CV_8UC3};
 use opencv::videoio;
 use opencv::videoio::{VideoCaptureTrait, VideoCaptureTraitConst, VideoWriter, VideoWriterTrait, CAP_ANY};
+use rayon::iter::IntoParallelIterator;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::ThreadPoolBuilder;
 use serde::Deserialize;
 
 /// We track progress percentage in a global static mut as we only support 1 job at a time right now
 pub static mut PROGRESS_PERCENTAGE: f32 = 0.0;
 
-/// Current frame being processed
-pub static mut CURRENT_FRAME: u64 = 0;
+/// Current frame being processed during read step
+pub static mut READ_CURRENT_FRAME: u64 = 0;
+/// Current frame being processed during encode step
+pub static mut ENCODE_CURRENT_FRAME: u64 = 0;
+/// Current frame being processed during write step
+pub static mut WRITE_CURRENT_FRAME: u64 = 0;
 
 /// Total number of frames in the video
 pub static mut TOTAL_FRAMES: u64 = 0;
@@ -72,6 +78,8 @@ pub struct VideoConfig {
     use_max_fps_for_output_video: bool,
     /// Rotate the input (0 = 90 CLOCKWISE, 1 = 180, 2 = 90 COUNTER-CLOCKWISE)
     rotate: i32,
+    /// Number of threads for parallel processing during encode step. [default: number of logical CPU cores]
+    num_threads: u8,
 }
 
 impl Default for VideoConfig {
@@ -87,6 +95,7 @@ impl Default for VideoConfig {
             overwrite: false,
             use_max_fps_for_output_video: false,
             rotate: -1,
+            num_threads: available_parallelism().unwrap().get() as u8,
         }
     }
 }
@@ -130,8 +139,7 @@ pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) ->
     res
 }
 
-#[inline]
-pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_writer: &mut VideoWriter, size: &Size) {
+pub fn encode_ascii_frame(config: &VideoConfig, ascii: &[Vec<&str>], size: &Size) -> Mat {
     let frame = generate_ascii_image(ascii, size, config.invert, config.font_size);
     //println!("image frame width: {}, height: {}", frame.width(), frame.height());
 
@@ -152,7 +160,12 @@ pub fn write_to_ascii_video(config: &VideoConfig, ascii: &[Vec<&str>], video_wri
         })
     });
 
-    video_writer.write(&opencv_frame).expect("Could not write frame to video");
+    opencv_frame
+}
+
+#[inline]
+pub fn write_to_ascii_video(video_writer: &mut VideoWriter, opencv_frame: &Mat) {
+    video_writer.write(opencv_frame).expect("Could not write frame to video");
 }
 
 /// Processes video
@@ -162,9 +175,14 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
     // Reset cancellation flag and progress tracking
     unsafe {
         CANCEL_REQUESTED = false;
-        CURRENT_FRAME = 0;
+        READ_CURRENT_FRAME = 0;
+        ENCODE_CURRENT_FRAME = 0;
+        WRITE_CURRENT_FRAME = 0;
         TOTAL_FRAMES = 0;
+        PROGRESS_PERCENTAGE = 0.0;
     }
+
+    eprintln!("Processing video with config: {config:#?}");
 
     let video_path = config.video_path.as_str();
     check_valid_file(video_path);
@@ -182,6 +200,11 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
     unsafe {
         TOTAL_FRAMES = num_frames;
     }
+
+    if num_frames == 0 {
+        return Ok(());
+    }
+
     let orig_fps = capture.get(videoio::CAP_PROP_FPS).unwrap();
     let frame_time = 1.0 / orig_fps;
 
@@ -190,82 +213,176 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
     let clear_command = format!("{esc}c", esc = 27 as char);
 
     let frame_cut = orig_fps as u64 / config.max_fps;
-
-    // Video output
-    let mut video_writer: VideoWriter = VideoWriter::default().unwrap();
-    let mut output_frame_size: Size = Size::default();
     let should_rotate = config.rotate > -1 && config.rotate < 3;
 
     if output_video_file {
-        println!("Encoding video from {} to ascii video at {}", video_path, output_video_path.unwrap());
-    }
+        eprintln!("Encoding video from {} to ascii video at {}", video_path, output_video_path.unwrap());
 
-    let progressbar = ProgressBar::new(num_frames);
+        let pool = ThreadPoolBuilder::new()
+            .num_threads(config.num_threads as usize) // tune this based on available RAM
+            .build()
+            .unwrap();
 
-    for i in 0..num_frames {
-        // Check for cancellation
+        // Triple progress bar for reading, encoding, then writing frames
+        let progressbar = ProgressBar::new(num_frames * 3);
+
+        let input_frames = (0..num_frames)
+            .into_iter()
+            .map(|i| {
+                unsafe {
+                    if CANCEL_REQUESTED {
+                        CANCEL_REQUESTED = false;
+                        return Err(Error::Cancelled);
+                    }
+                    READ_CURRENT_FRAME += 1;
+                }
+
+                // Process first frame to get output dimensions and initialize video writer
+                eprintln!("Reading frame {i} of {num_frames}");
+
+                let mut frame = UnsafeMat(Mat::default());
+
+                // CV_8UC3
+                if !capture.read(&mut frame.0).expect("Could not read frame of video") {
+                    eprintln!("Error reading frame {i} from input video.  Skipping frame and continuing...");
+                    return Err(Error::VideoReadError("Could not read frame {frame} from video".to_string())) ;
+                }
+
+                // Rotate
+                if should_rotate {
+                    opencv::core::rotate(&frame.clone(), &mut frame.0, config.rotate).unwrap();
+                }
+
+                progressbar.inc(1);
+                unsafe {
+                    PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
+                }
+
+                Ok(frame)
+            })
+            .collect::<VideoResult<Vec<UnsafeMat>>>()?;
+
+        let mut frames = Vec::new();
+
+        let ascii = convert_opencv_video_to_ascii(&input_frames[0], &config);
+        unsafe {
+            ENCODE_CURRENT_FRAME = 1;
+        }
+        // Initialize VideoWriter for real
+        let output_frame_size: Size = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
+        // Openh264 codec seems to have this dimension limitation so we cap it
+        if output_frame_size.width * output_frame_size.height > 9437184 {
+            // a / b = width / height
+            // a * b <= 9437184
+            return Err(Error::ResolutionTooLarge);
+        }
+        frames.push(encode_ascii_frame(&config, &ascii, &output_frame_size));
+
+        //println!("frame size: {:?}", output_frame_size);
+        let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
+        // TODO: allow any video output
+        let mut video_writer: VideoWriter = VideoWriter::new(
+            output_video_path.unwrap().as_str(),
+            VideoWriter::fourcc('a', 'v', 'c', '1').unwrap(),
+            video_fps,
+            output_frame_size,
+            true,
+        )
+            .unwrap();
+
+        progressbar.inc(1);
+        unsafe {
+            PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
+        }
+
+        pool.install(|| {
+            frames.extend((1..num_frames)
+                .into_par_iter()
+                .filter_map(|i| {
+                    // eprintln to prevent buffering issues with rayon
+                    eprintln!("Encoding frame {i} of {num_frames}");
+                    //std::io::stdout().flush().unwrap();
+
+                    if config.use_max_fps_for_output_video && i % frame_cut == 0 {
+                        return None;
+                    }
+
+                    // Check for cancellation
+                    unsafe {
+                        if CANCEL_REQUESTED {
+                            return None;
+                        }
+                        ENCODE_CURRENT_FRAME += 1;
+                    }
+
+                    let ascii = convert_opencv_video_to_ascii(&input_frames[i as usize], &config);
+                    let frame = encode_ascii_frame(&config, &ascii, &output_frame_size);
+                    progressbar.inc(1);
+                    unsafe {
+                        PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
+                    }
+                    Some(frame)
+                })
+                .collect::<Vec<Mat>>()
+            );
+        });
+
         unsafe {
             if CANCEL_REQUESTED {
-                CANCEL_REQUESTED = false;
-                return Ok(());
+                return Err(Error::Cancelled);
             }
-            CURRENT_FRAME = i;
         }
 
-        println!("Processing frame {i} of {num_frames}");
-        let start = SystemTime::now();
-        let mut frame = UnsafeMat(Mat::default());
+        for (i, ascii) in frames.into_iter().enumerate() {
+            eprintln!("Writing frame {i} of {num_frames}");
 
-        // CV_8UC3
-        // TODO: error handling
-        let read = capture.read(&mut frame.0).expect("Could not read frame of video");
-        if !read {
-            eprintln!("Error reading frame {} from input video.  Skipping frame and continuing...", i);
-            continue;
-        }
+            if config.use_max_fps_for_output_video && i as u64 % frame_cut == 0 {
+                continue;
+            }
 
-        // Rotate
-        if should_rotate {
-            opencv::core::rotate(&frame.clone(), &mut frame.0, config.rotate).unwrap();
-        }
-
-        let ascii = convert_opencv_video_to_ascii(&frame, &config);
-
-        if output_video_file {
-            // Write to video file
-
-            if i == 0 {
-                // Initialize VideoWriter for real
-                output_frame_size = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
-                // Openh264 codec seems to have this dimension limitation so we cap it
-                if output_frame_size.width * output_frame_size.height > 9437184 {
-                    // a / b = width / height
-                    // a * b <= 9437184
-                    return Err(Error::ResolutionTooLarge);
+            unsafe {
+                if CANCEL_REQUESTED {
+                    return Err(Error::Cancelled);
                 }
-                //println!("frame size: {:?}", output_frame_size);
-                let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
-                // TODO: allow any video output
-                video_writer = VideoWriter::new(
-                    output_video_path.unwrap().as_str(),
-                    VideoWriter::fourcc('a', 'v', 'c', '1').unwrap(),
-                    video_fps,
-                    output_frame_size,
-                    true,
-                )
-                .unwrap();
+                WRITE_CURRENT_FRAME += 1;
             }
 
             progressbar.inc(1);
             unsafe {
                 PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
             }
-            if config.use_max_fps_for_output_video && i % frame_cut == 0 {
-                continue;
+
+            write_to_ascii_video(&mut video_writer, &ascii);
+        }
+
+        // Writes the video explicitly just for clarity
+        video_writer.release().unwrap();
+        progressbar.finish();
+        unsafe {
+            PROGRESS_PERCENTAGE = 1.0;
+        }
+
+        eprintln!("Finished writing output video file to {}", output_video_path.unwrap());
+    } else {
+        for i in 0..num_frames {
+            let start = SystemTime::now();
+            let mut frame = UnsafeMat(Mat::default());
+
+            // CV_8UC3
+            // TODO: error handling
+            let read = capture.read(&mut frame.0).expect("Could not read frame of video");
+            if !read {
+                eprintln!("Error reading frame {} from input video.  Skipping frame and continuing...", i);
+                return Err(Error::VideoReadError(format!("Could not read frame {i} from video"))) ;
             }
 
-            write_to_ascii_video(&config, &ascii, &mut video_writer, &output_frame_size);
-        } else {
+            // Rotate
+            if should_rotate {
+                opencv::core::rotate(&frame.clone(), &mut frame.0, config.rotate).unwrap();
+            }
+
+            let ascii = convert_opencv_video_to_ascii(&frame, &config);
+
             // Write to terminal
 
             if i % frame_cut == 0 {
@@ -279,17 +396,6 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                 sleep(Duration::from_millis(((frame_time - elapsed) * 1000.0) as u64));
             }
         }
-    }
-
-    // Writes the video explicitly just for clarity
-    video_writer.release().unwrap();
-    progressbar.finish();
-    unsafe {
-        PROGRESS_PERCENTAGE = 1.0;
-    }
-
-    if output_video_file {
-        println!("Finished writing output video file to {}", output_video_path.unwrap());
     }
 
     Ok(())

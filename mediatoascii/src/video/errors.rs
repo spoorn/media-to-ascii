@@ -5,6 +5,10 @@ use thiserror::Error;
 pub enum Error {
     #[error("Resolution too large for codec. Try increasing scale-down setting")]
     ResolutionTooLarge,
+    #[error("Failed to read video file: {0}")]
+    VideoReadError(String),
+    #[error("Operation cancelled")]
+    Cancelled,
 }
 
 /// Manually implement Serialize to work with tauri
