@@ -1,9 +1,12 @@
 use ffmpeg_next::format::{input, Pixel};
 use ffmpeg_next::media::Type;
 use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
+use crate::util::constants::{GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE};
 use crate::util::FFmpegFrame;
 use crate::video::errors::Error;
+use crate::video::VideoConfig;
 use crate::video::VideoResult;
 
 pub fn read_video_frames_ffmpeg(path: &str) -> VideoResult<Vec<FFmpegFrame>> {
@@ -64,4 +67,34 @@ pub fn read_video_frames_ffmpeg(path: &str) -> VideoResult<Vec<FFmpegFrame>> {
     }
 
     Ok(frames)
+}
+
+#[inline]
+pub fn convert_ffmpeg_video_to_ascii(frame: &FFmpegFrame, config: &VideoConfig) -> Vec<Vec<&'static str>> {
+    let scale_down = config.scale_down;
+    let height_sample_scale = config.height_sample_scale;
+
+    let width = frame.width;
+    let height = frame.height;
+
+    let scaled_width = (width as f32 / scale_down) as usize;
+    let scaled_height = ((height as f32 / scale_down) / height_sample_scale) as usize;
+    let mut res = vec![vec![" "; scaled_width]; scaled_height];
+
+    let greyscale_ramp: &[&str] = if config.invert { &REVERSE_GREYSCALE_RAMP } else { &GREYSCALE_RAMP };
+
+    res.par_iter_mut().enumerate().for_each(|(y, row)| {
+        (0..scaled_width).for_each(|x| {
+            let src_y = (y as f32 * scale_down * height_sample_scale) as u32;
+            let src_x = (x as f32 * scale_down) as u32;
+
+            let (r, g, b) = frame.get_pixel(src_x, src_y);
+            let greyscale_value =
+                RGB_TO_GREYSCALE.0 * r as f32 + RGB_TO_GREYSCALE.1 * g as f32 + RGB_TO_GREYSCALE.2 * b as f32;
+            let index = (greyscale_value * (greyscale_ramp.len() - 1) as f32 / 255.0).ceil() as usize;
+            row[x] = greyscale_ramp[index];
+        })
+    });
+
+    res
 }
