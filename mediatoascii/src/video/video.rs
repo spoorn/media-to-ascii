@@ -297,7 +297,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
 
         pool.install(|| {
             frames.extend((1..num_frames)
-                .into_iter()
+                .into_par_iter()
                 .filter_map(|i| {
                     // eprintln to prevent buffering issues with rayon
                     eprintln!("Encoding frame {i} of {num_frames}");
