@@ -2,7 +2,6 @@ use ab_glyph::PxScale;
 use derive_builder::Builder;
 use image::{GenericImageView, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
-use opencv::core::Size;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::cell::UnsafeCell;
 
@@ -44,7 +43,8 @@ impl Default for ImageConfig {
 #[inline]
 pub fn generate_ascii_image(
     ascii: &[Vec<&str>],
-    size: &Size,
+    width: u32,
+    height: u32,
     invert: bool,
     font_size: f32,
 ) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
@@ -52,8 +52,8 @@ pub fn generate_ascii_image(
     let text_color = if invert { BLACK_RGB } else { WHITE_RGB };
     //println!("image size: {:?}", size);
     let frame = UnsafeImageBuffer(UnsafeCell::new(Some(RgbImage::from_pixel(
-        size.width as u32,
-        size.height as u32,
+        width,
+        height,
         background_color,
     ))));
 
@@ -83,13 +83,14 @@ pub fn write_to_image<S: AsRef<str>>(
     output_file: S,
     overwrite: bool,
     ascii: &[Vec<&str>],
-    size: &Size,
+    width: u32,
+    height: u32,
     invert: bool,
     font_size: f32,
 ) {
     let output_file = output_file.as_ref();
     check_file_exists(output_file, overwrite);
-    match generate_ascii_image(ascii, size, invert, font_size).save(output_file) {
+    match generate_ascii_image(ascii, width, height, invert, font_size).save(output_file) {
         Ok(_) => {
             println!("Successfully saved ascii image to {}", output_file);
         }
@@ -141,11 +142,13 @@ pub fn process_image(config: ImageConfig) {
     }
 
     if let Some(file) = config.output_image_path.as_ref() {
+        let (width, height) = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
         write_to_image(
             file,
             config.overwrite,
             &ascii,
-            &get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size),
+            width,
+            height,
             config.invert,
             config.font_size,
         );

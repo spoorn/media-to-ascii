@@ -1,7 +1,7 @@
 use ffmpeg_next::format::{input, Pixel};
 use ffmpeg_next::media::Type;
 use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefMutIterator, IndexedParallelIterator, ParallelIterator};
 
 use crate::util::constants::{GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE};
 use crate::util::FFmpegFrame;
@@ -69,6 +69,7 @@ pub fn read_video_frames_ffmpeg(path: &str) -> VideoResult<Vec<FFmpegFrame>> {
     Ok(frames)
 }
 
+/// Converts a ffmpeg frame into ascii representation 2-d Vector
 #[inline]
 pub fn convert_ffmpeg_video_to_ascii(frame: &FFmpegFrame, config: &VideoConfig) -> Vec<Vec<&'static str>> {
     let scale_down = config.scale_down;

@@ -2,7 +2,7 @@ use std::cell::UnsafeCell;
 use std::ops::{Deref, DerefMut};
 
 use image::{ImageBuffer, Rgb};
-use opencv::core::{Mat, Size, Size_};
+use opencv::core::Mat;
 
 pub mod constants;
 pub mod ffmpeg;
@@ -64,6 +64,6 @@ pub fn print_ascii(ascii: &[Vec<&str>]) {
     print!("{}", ascii_to_str(ascii));
 }
 
-pub fn get_size_from_ascii(ascii: &[Vec<&str>], height_sample_scale: f32, font_size: f32) -> Size_<i32> {
-    Size::new((ascii[0].len() as f32 * font_size / height_sample_scale) as i32, (ascii.len() as f32 * font_size) as i32)
+pub fn get_size_from_ascii(ascii: &[Vec<&str>], height_sample_scale: f32, font_size: f32) -> (u32, u32) {
+    ((ascii[0].len() as f32 * font_size / height_sample_scale) as u32, (ascii.len() as f32 * font_size) as u32)
 }

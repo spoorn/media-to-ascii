@@ -5,19 +5,20 @@ use std::time::{Duration, SystemTime};
 
 use crate::image::generate_ascii_image;
 use crate::util::constants::{
-    DARK_BGR_SCALAR, GREYSCALE_RAMP, MAGIC_HEIGHT_TO_WIDTH_RATIO, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE,
+    DARK_BGR_SCALAR, MAGIC_HEIGHT_TO_WIDTH_RATIO,
     WHITE_BGR_SCALAR,
 };
 use crate::util::file_util::{check_file_exists, check_valid_file};
 use crate::util::{ascii_to_str, get_size_from_ascii, UnsafeMat};
+use crate::video;
 use crate::video::errors::Error;
 use derive_builder::Builder;
 use indicatif::ProgressBar;
-use opencv::core::{Mat, MatTraitConst, MatTraitManual, Size, Vec3b, CV_8UC3};
+use opencv::core::{Mat, MatTraitManual, Size, Vec3b, CV_8UC3};
 use opencv::videoio;
 use opencv::videoio::{VideoCaptureTrait, VideoCaptureTraitConst, VideoWriter, VideoWriterTrait, CAP_ANY};
 use rayon::iter::IntoParallelIterator;
-use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::prelude::{IndexedParallelIterator, ParallelIterator};
 use rayon::ThreadPoolBuilder;
 use serde::Deserialize;
 
@@ -43,16 +44,16 @@ pub type VideoResult<T> = Result<T, crate::video::errors::Error>;
 #[builder(default)]
 pub struct VideoConfig {
     /// Input Video file
-    video_path: String,
+    pub video_path: String,
     /// Multiplier to scale down input dimensions by when converting to ASCII.  For large frames,
     /// recommended to scale down more so output file size is more reasonable.  Affects output quality.
     /// Note: the output dimensions will also depend on the `font-size` setting.
-    scale_down: f32,
+    pub scale_down: f32,
     /// Font size of the ascii characters.  Defaults to 12.0.  Affects output quality.
     /// This directly affects the scaling of the output resolution as we "expand" each pixel to fit
     /// the Cascadia font to this size.  Note: this is not in "pixels" per-se, but will roughly scale
     /// the output to a multiple of this.
-    font_size: f32,
+    pub font_size: f32,
     /// Rate at which we sample from the pixel rows of the frames.  This affects how stretched the
     /// output ascii is vertically due to discrepancies in the width-to-height ratio of the
     /// Cascadia font, and the input/output media dimensions.
@@ -61,25 +62,25 @@ pub struct VideoConfig {
     /// If you see text overflowing to the right of the output frame(s), or cut off short, you can
     /// try tuning this setting.  Larger values stretch the output. The default magic number is 2.046.
     /// See https://github.com/spoorn/media-to-ascii/issues/2 for in-depth details.
-    height_sample_scale: f32,
-    invert: bool,
+    pub height_sample_scale: f32,
+    pub invert: bool,
     /// Max FPS for video outputs.  If outputting to video file, `use_max_fps_for_output_video`
     /// must be set to `true` to honor this setting.  Ascii videos in the terminal default to
     /// max_fps=10 for smoother visuals.
-    max_fps: u64,
+    pub max_fps: u64,
     /// Output file path.  If omitted, output will be written to console.
     /// Supports most image formats, and .mp4 video outputs.
     /// Images will be resized to fit the ascii text.  Videos will honor the aspect ratio of the
     /// input, but resolution will be scaled differently approximately to `(height|width) / scale_down * font_size`.
-    output_video_path: Option<String>,
+    pub output_video_path: Option<String>,
     /// Overwrite any output file if it already exists
-    overwrite: bool,
+    pub overwrite: bool,
     /// Use the max_fps setting for video file outputs.
-    use_max_fps_for_output_video: bool,
+    pub use_max_fps_for_output_video: bool,
     /// Rotate the input (0 = 90 CLOCKWISE, 1 = 180, 2 = 90 COUNTER-CLOCKWISE)
-    rotate: i32,
+    pub rotate: i32,
     /// Number of threads for parallel processing during encode step. [default: number of logical CPU cores]
-    num_threads: u8,
+    pub num_threads: u8,
 }
 
 impl Default for VideoConfig {
@@ -100,47 +101,8 @@ impl Default for VideoConfig {
     }
 }
 
-/// Converts an opencv frame Matrix into ascii representation 2-d Vector
-///
-/// References https://github.com/luketio/asciiframe/blob/main/src/converter.rs#L15.
-#[inline]
-pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) -> Vec<Vec<&'static str>> {
-    let scale_down = config.scale_down;
-    let height_sample_scale = config.height_sample_scale;
-
-    let width = frame.cols();
-    let height = frame.rows();
-    //println!("width: {}, height: {}", width, height);
-    // TODO: scaled dims
-    let scaled_width = (width as f32 / scale_down) as usize;
-    let scaled_height = ((height as f32 / scale_down) / height_sample_scale) as usize;
-    //println!("scaled scaled_width: {}, scaled_height: {}", scaled_width, scaled_height);
-    let mut res = vec![vec![" "; scaled_width]; scaled_height];
-
-    // Invert greyscale, for dark backgrounds
-    let greyscale_ramp: &[&str] = if config.invert { &REVERSE_GREYSCALE_RAMP } else { &GREYSCALE_RAMP };
-
-    // SAFETY: operates pixels independently
-    res.par_iter_mut().enumerate().for_each(|(y, row)| {
-        // TODO: is this parallelizable?
-        // TODO: This is a bad sampling method when scaling down
-        (0..scaled_width).for_each(|x| {
-            let pix: &Vec3b = frame
-                .at_2d::<Vec3b>((y as f32 * scale_down * height_sample_scale) as i32, (x as f32 * scale_down) as i32)
-                .unwrap();
-            let greyscale_value = RGB_TO_GREYSCALE.0 * pix[0] as f32
-                + RGB_TO_GREYSCALE.1 * pix[1] as f32
-                + RGB_TO_GREYSCALE.2 * pix[2] as f32;
-            let index = (greyscale_value * (greyscale_ramp.len() - 1) as f32 / 255.0).ceil() as usize;
-            row[x] = greyscale_ramp[index];
-        })
-    });
-
-    res
-}
-
-pub fn encode_ascii_frame(config: &VideoConfig, ascii: &[Vec<&str>], size: &Size) -> Mat {
-    let frame = generate_ascii_image(ascii, size, config.invert, config.font_size);
+pub fn encode_ascii_frame(config: &VideoConfig, ascii: &[Vec<&str>], width: u32, height: u32) -> Mat {
+    let frame = generate_ascii_image(ascii, width, height, config.invert, config.font_size);
     //println!("image frame width: {}, height: {}", frame.width(), frame.height());
 
     // Create opencv CV_8UC3 frame
@@ -264,19 +226,19 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
 
         let mut frames = Vec::new();
 
-        let ascii = convert_opencv_video_to_ascii(&input_frames[0], &config);
+        let ascii = video::opencv::convert_opencv_video_to_ascii(&input_frames[0], &config);
         unsafe {
             ENCODE_CURRENT_FRAME = 1;
         }
         // Initialize VideoWriter for real
-        let output_frame_size: Size = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
+        let (width, height) = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
         // Openh264 codec seems to have this dimension limitation so we cap it
-        if output_frame_size.width * output_frame_size.height > 9437184 {
+        if width * height > 9437184 {
             // a / b = width / height
             // a * b <= 9437184
             return Err(Error::ResolutionTooLarge);
         }
-        frames.push(encode_ascii_frame(&config, &ascii, &output_frame_size));
+        frames.push(encode_ascii_frame(&config, &ascii, width, height));
 
         //println!("frame size: {:?}", output_frame_size);
         let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
@@ -285,7 +247,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
             output_video_path.unwrap().as_str(),
             VideoWriter::fourcc('a', 'v', 'c', '1').unwrap(),
             video_fps,
-            output_frame_size,
+            Size::new(width as i32, height as i32),
             true,
         )
         .unwrap();
@@ -316,8 +278,8 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                             ENCODE_CURRENT_FRAME += 1;
                         }
 
-                        let ascii = convert_opencv_video_to_ascii(&input_frames[i as usize], &config);
-                        let frame = encode_ascii_frame(&config, &ascii, &output_frame_size);
+                        let ascii = video::opencv::convert_opencv_video_to_ascii(&input_frames[i as usize], &config);
+                        let frame = encode_ascii_frame(&config, &ascii, width, height);
                         progressbar.inc(1);
                         unsafe {
                             PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
@@ -382,7 +344,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                 opencv::core::rotate(&frame.clone(), &mut frame.0, config.rotate).unwrap();
             }
 
-            let ascii = convert_opencv_video_to_ascii(&frame, &config);
+            let ascii = video::opencv::convert_opencv_video_to_ascii(&frame, &config);
 
             // Write to terminal
 
