@@ -138,6 +138,10 @@ async function cancelProcessing() {
   overflow-y: auto;
 }
 
+.settings small {
+  text-align: left;
+}
+
 .progress-container {
   position: fixed;
   bottom: 0;

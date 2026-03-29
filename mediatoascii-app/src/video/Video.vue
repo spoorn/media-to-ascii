@@ -111,10 +111,11 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
         <form @submit.prevent="processVideo">
             <div class="settings-grid">
                 <div class="settings-column">
-                    <h2 class="text-base font-semibold mb-2 border-b border-gray-600 pb-1">Input Settings</h2>
+                    <h2 class="text-base font-semibold mb-2 border-b border-gray-600 pb-1">Input/Ascii Settings</h2>
 
                     <div class="form-group">
-                        <label for="video-input" class="block mb-0.5 text-sm font-medium">Video Path</label>
+                        <label for="video-input" class="block mb-0.5 text-sm font-medium">Input Video Path</label>
+                        <small class="text-gray-500">Required input video file path</small>
                         <div class="flex gap-2">
                             <InputText
                                 id="video-input"
@@ -130,11 +131,14 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                                 @click="browseInputVideo"
                             />
                         </div>
-                        <small class="text-gray-500">Required input video file path</small>
                     </div>
 
                     <div class="form-group">
                         <label for="scale-down" class="block mb-0.5 text-sm font-medium">Scale Down</label>
+                        <small class="text-gray-500 text-left">
+                            Multiplier to scale down input dimensions. For the output codec, you'll be required to scale
+                            down the video to a supported resolution. Recommend 4.0 or higher for 1080p inputs
+                        </small>
                         <InputNumber
                             id="scale-down"
                             v-model="config.scale_down"
@@ -146,11 +150,11 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                             :showButtons="true"
                             :disabled="processing"
                         />
-                        <small class="text-gray-500">Multiplier to scale down input dimensions</small>
                     </div>
 
                     <div class="form-group">
                         <label for="font-size" class="block mb-0.5 text-sm font-medium">Font Size</label>
+                        <small class="text-gray-500">Affects output quality and resolution</small>
                         <InputNumber
                             id="font-size"
                             v-model="config.font_size"
@@ -160,7 +164,6 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                             :showButtons="true"
                             :disabled="processing"
                         />
-                        <small class="text-gray-500">Affects output quality and resolution</small>
                     </div>
 
                     <div class="form-group">
@@ -175,27 +178,14 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                             class="w-full"
                         />
                     </div>
-
-                  <div class="form-group">
-                    <label for="scale-down" class="block mb-0.5 text-sm font-medium">Num Threads</label>
-                    <InputNumber
-                        id="num-threads"
-                        v-model="config.num_threads"
-                        :min="1"
-                        :max="32"
-                        :step="1"
-                        :showButtons="true"
-                        :disabled="processing"
-                    />
-                    <small class="text-gray-500">Num Threads for parallel encoding</small>
-                  </div>
                 </div>
 
                 <div class="settings-column">
-                    <h2 class="text-base font-semibold mb-2 border-b border-gray-600 pb-1">Output Settings</h2>
+                    <h2 class="text-base font-semibold mb-2 border-b border-gray-600 pb-1">Output/Encoding Settings</h2>
 
                     <div class="form-group">
                         <label for="video-output" class="block mb-0.5 text-sm font-medium">Output Path</label>
+                        <small class="text-gray-500">Leave empty to play in terminal</small>
                         <div class="flex gap-2">
                             <InputText
                                 id="video-output"
@@ -211,11 +201,11 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                                 @click="browseOutputVideo"
                             />
                         </div>
-                        <small class="text-gray-500">Leave empty to play in terminal</small>
                     </div>
 
                     <div class="form-group">
-                        <label for="invert" class="block mb-0.5 text-sm font-medium">Invert</label>
+                        <label for="invert" class="block mb-0.5 text-sm font-medium">Background</label>
+                        <small class="text-gray-500">Text color is inverted from background</small>
                         <ToggleButton
                             id="invert"
                             v-model="config.invert"
@@ -224,19 +214,29 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                             :disabled="processing"
                             class="w-full"
                         />
-                        <small class="text-gray-500">For light backgrounds, use inverted colors</small>
                     </div>
 
                     <div class="form-group">
-                        <label for="use-max-fps" class="block mb-0.5 text-sm font-medium">Use Max FPS for Output</label>
-                        <div class="flex items-center gap-2">
-                            <Checkbox v-model="config.use_max_fps_for_output_video" :binary="true" :disabled="processing" />
-                            <label for="use-max-fps" class="text-sm">Apply max FPS setting to video file output</label>
-                        </div>
+                        <label for="scale-down" class="block mb-0.5 text-sm font-medium">Num Threads</label>
+                        <small class="text-gray-500">Num Threads for parallel encoding</small>
+                        <InputNumber
+                            id="num-threads"
+                            v-model="config.num_threads"
+                            :min="1"
+                            :max="32"
+                            :step="1"
+                            :showButtons="true"
+                            :disabled="processing"
+                        />
                     </div>
 
                     <div class="form-group">
                         <label for="max-fps" class="block mb-0.5 text-sm font-medium">Max FPS</label>
+                        <small class="text-gray-500">Maximum frames per second for terminal playback</small>
+                        <div class="flex items-center gap-2 my-2">
+                            <Checkbox v-model="config.use_max_fps_for_output_video" :binary="true" :disabled="processing" />
+                            <label for="use-max-fps" class="text-sm">Apply max FPS setting to video file output</label>
+                        </div>
                         <InputNumber
                             id="max-fps"
                             v-model="config.max_fps"
@@ -245,7 +245,6 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                             :step="1"
                             :disabled="processing"
                         />
-                        <small class="text-gray-500">Maximum frames per second for terminal playback</small>
                     </div>
                 </div>
             </div>
