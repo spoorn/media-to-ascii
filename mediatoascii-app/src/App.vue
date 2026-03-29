@@ -140,8 +140,8 @@ async function cancelProcessing() {
   left: 0;
   right: 0;
   padding: 0.75rem 1rem;
-  background: #ffe6f2;
-  border-top: 1px solid #e89fc8;
+  background: #f6f6f6;
+  border-top: 1px solid #ccc;
   z-index: 100;
 }
 
@@ -219,7 +219,7 @@ button:active {
 }
 
 .p-progressbar .p-progressbar-value {
-  background: #d94a8c;
+  background: #ffb8db;
 }
 }
 </style>

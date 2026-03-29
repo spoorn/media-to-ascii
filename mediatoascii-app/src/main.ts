@@ -12,13 +12,13 @@ const MyPreset = definePreset(Aura, {
             100: '#ffe6f2',
             200: '#ffd6eb',
             300: '#ffb8db',
-            400: '#f47ab8',
-            500: '#d94a8c',
-            600: '#c23078',
-            700: '#a02060',
-            800: '#801050',
-            900: '#600840',
-            950: '#400528'
+            400: '#ffb8db',
+            500: '#ffb8db',
+            600: '#ffb8db',
+            700: '#ffb8db',
+            800: '#fcafd4',
+            900: '#fda4d1',
+            950: '#ff92c6'
         },
         colorScheme: {
             light: {
