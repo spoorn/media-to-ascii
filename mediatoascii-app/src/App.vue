@@ -60,7 +60,7 @@ async function cancelProcessing() {
       <div class="progress-content">
         <div class="flex-1">
           <ProgressBar :value="progress.percentage" class="h-3" />
-          <div class="grid grid-cols-3 gap-4 text-sm text-gray-500">
+          <div class="grid grid-cols-4 gap-4 text-sm text-gray-500">
             <div>
               <p>
                 Read Frame {{ progress.currentReadFrame }} of {{ progress.totalFrames }}
