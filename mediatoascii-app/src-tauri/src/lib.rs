@@ -25,7 +25,7 @@ async fn process_video(config: VideoConfig) -> VideoResult<()> {
 #[tauri::command]
 async fn video_progress(app: AppHandle) {
     unsafe {
-        while mediatoascii::video::PROGRESS_PERCENTAGE < 1.0 {
+        loop {
             app.emit("video-progress", VideoProgressInfo {
                 percentage: mediatoascii::video::PROGRESS_PERCENTAGE,
                 current_read_frame: mediatoascii::video::READ_CURRENT_FRAME,

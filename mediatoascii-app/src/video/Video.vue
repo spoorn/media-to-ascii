@@ -21,6 +21,7 @@ interface VideoProgress {
 
 const config = ref(defaultVideoConfig());
 const processError = ref<string | null>(null);
+const anyProcessed = inject<Ref<boolean>>('anyProcessed', ref(false));
 const processing = inject<Ref<boolean>>('processing', ref(false));
 const progress = inject<Ref<VideoProgress>>('progress', ref({ percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 }));
 const startTimer = inject<() => void>('startTimer');
@@ -67,6 +68,7 @@ async function processVideo() {
     config.value.rotate = selectedRotate.value;
     processError.value = null;
     processing.value = true;
+    anyProcessed.value = true;
     progress.value = { percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 };
     startTimer?.();
 
@@ -78,13 +80,15 @@ async function processVideo() {
     invoke('process_video', { config: config.value })
         .then(() => {
             console.log('Video processing done');
+            // Artificially set progress to 100% on completion in case final event(s) were missed
+            progress.value.percentage = 100;
+            progress.value.currentWriteFrame = progress.value.totalFrames;
         })
         .catch((error) => {
             processError.value = error as string;
         })
         .finally(() => {
             processing.value = false;
-            progress.value = { percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 };
             stopTimer?.();
         });
 }

@@ -13,6 +13,8 @@ interface VideoProgress {
   totalFrames: number;
 }
 
+// True if at least one video has been processed since app was opened
+const anyProcessed = ref(false);
 const processing = ref(false);
 const progress = ref<VideoProgress>({ percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 });
 
@@ -20,6 +22,7 @@ const elapsedTime = ref(0);
 let timerInterval: number | null = null;
 
 function startTimer() {
+    elapsedTime.value = 0;
     const startTime = Date.now();
     timerInterval = window.setInterval(() => {
         elapsedTime.value = Math.floor((Date.now() - startTime) / 1000);
@@ -31,7 +34,6 @@ function stopTimer() {
         clearInterval(timerInterval);
         timerInterval = null;
     }
-    elapsedTime.value = 0;
 }
 
 function formatTime(seconds: number): string {
@@ -41,6 +43,7 @@ function formatTime(seconds: number): string {
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
+provide('anyProcessed', anyProcessed);
 provide('processing', processing);
 provide('progress', progress);
 provide('startTimer', startTimer);
@@ -56,7 +59,7 @@ async function cancelProcessing() {
     <div class="settings mx-auto">
       <Video/>
     </div>
-    <div v-if="processing" class="progress-container">
+    <div v-if="anyProcessed" class="progress-container">
       <div class="progress-content">
         <div class="flex-1">
           <ProgressBar :value="progress.percentage" class="h-3" />
@@ -91,6 +94,7 @@ async function cancelProcessing() {
           severity="danger"
           size="small"
           @click="cancelProcessing"
+          :disabled="!processing"
         />
       </div>
     </div>
