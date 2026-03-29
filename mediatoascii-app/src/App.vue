@@ -107,8 +107,8 @@ async function cancelProcessing() {
   left: 0;
   right: 0;
   padding: 0.75rem 1rem;
-  background: #f6f6f6;
-  border-top: 1px solid #ccc;
+  background: #ffe6f2;
+  border-top: 1px solid #e89fc8;
   z-index: 100;
 }
 
@@ -152,12 +152,12 @@ button {
 }
 
 button:hover {
-  border-color: #396cd8;
+  border-color: #d94a8c;
 }
 
 button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
+  border-color: #d94a8c;
+  background-color: #ffd6eb;
 }
 
 input,
@@ -181,8 +181,12 @@ button {
     background-color: #0f0f0f98;
   }
 
-  button:active {
-    background-color: #0f0f0f69;
-  }
+button:active {
+  background-color: #0f0f0f69;
+}
+
+.p-progressbar .p-progressbar-value {
+  background: #d94a8c;
+}
 }
 </style>
