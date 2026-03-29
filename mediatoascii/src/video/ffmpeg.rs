@@ -1,13 +1,13 @@
-use ffmpeg::format::{input, Pixel};
-use ffmpeg::media::Type;
-use ffmpeg::software::scaling::{context::Context, flag::Flags};
+use ffmpeg_next::format::{input, Pixel};
+use ffmpeg_next::media::Type;
+use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
 
 use crate::util::FFmpegFrame;
 use crate::video::errors::Error;
 use crate::video::VideoResult;
 
 pub fn read_video_frames_ffmpeg(path: &str) -> VideoResult<Vec<FFmpegFrame>> {
-    ffmpeg::init().map_err(|e| Error::VideoReadError(format!("ffmpeg init error: {e}")))?;
+    ffmpeg_next::init().map_err(|e| Error::VideoReadError(format!("ffmpeg init error: {e}")))?;
 
     let mut ictx = input(path).map_err(|e| Error::VideoReadError(format!("ffmpeg input error: {e}")))?;
 
@@ -17,7 +17,7 @@ pub fn read_video_frames_ffmpeg(path: &str) -> VideoResult<Vec<FFmpegFrame>> {
         .ok_or_else(|| Error::VideoReadError("ffmpeg error: no video stream found".to_string()))?;
     let video_stream_index = video_stream.index();
 
-    let context_decoder = ffmpeg::codec::context::Context::from_parameters(video_stream.parameters())
+    let context_decoder = ffmpeg_next::codec::context::Context::from_parameters(video_stream.parameters())
         .map_err(|e| Error::VideoReadError(format!("ffmpeg codec context error: {e}")))?;
     let mut decoder =
         context_decoder.decoder().video().map_err(|e| Error::VideoReadError(format!("ffmpeg decoder error: {e}")))?;
@@ -42,9 +42,9 @@ pub fn read_video_frames_ffmpeg(path: &str) -> VideoResult<Vec<FFmpegFrame>> {
                 .send_packet(&packet)
                 .map_err(|e| Error::VideoReadError(format!("ffmpeg send packet error: {e}")))?;
 
-            let mut decoded = ffmpeg::util::frame::video::Video::empty();
+            let mut decoded = ffmpeg_next::util::frame::video::Video::empty();
             while decoder.receive_frame(&mut decoded).is_ok() {
-                let mut rgb_frame = ffmpeg::util::frame::video::Video::empty();
+                let mut rgb_frame = ffmpeg_next::util::frame::video::Video::empty();
                 scaler
                     .run(&decoded, &mut rgb_frame)
                     .map_err(|e| Error::VideoReadError(format!("ffmpeg scaler run error: {e}")))?;
@@ -54,9 +54,9 @@ pub fn read_video_frames_ffmpeg(path: &str) -> VideoResult<Vec<FFmpegFrame>> {
     }
 
     decoder.send_eof().map_err(|e| Error::VideoReadError(format!("ffmpeg send eof error: {e}")))?;
-    let mut decoded = ffmpeg::util::frame::video::Video::empty();
+    let mut decoded = ffmpeg_next::util::frame::video::Video::empty();
     while decoder.receive_frame(&mut decoded).is_ok() {
-        let mut rgb_frame = ffmpeg::util::frame::video::Video::empty();
+        let mut rgb_frame = ffmpeg_next::util::frame::video::Video::empty();
         scaler
             .run(&decoded, &mut rgb_frame)
             .map_err(|e| Error::VideoReadError(format!("ffmpeg scaler run error: {e}")))?;

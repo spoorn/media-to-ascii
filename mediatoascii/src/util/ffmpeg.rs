@@ -1,4 +1,4 @@
-use ffmpeg::util::frame::video::Video as FfmpegVideoFrame;
+use ffmpeg_next::util::frame::video::Video as FfmpegVideoFrame;
 
 pub struct FFmpegFrame {
     pub frame: FfmpegVideoFrame,
