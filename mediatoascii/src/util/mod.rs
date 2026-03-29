@@ -5,7 +5,10 @@ use image::{ImageBuffer, Rgb};
 use opencv::core::{Mat, Size, Size_};
 
 pub mod constants;
+pub mod ffmpeg;
 pub mod file_util;
+
+pub use ffmpeg::FFmpegFrame;
 
 /// Wrapper around Mat that let's us bypass non-Sync since Mat uses *mut c_void ptr.  Tricks
 /// compiler into letting us use this across threads even though it's unsafe.  Allows for

@@ -245,7 +245,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                 // CV_8UC3
                 if !capture.read(&mut frame.0).expect("Could not read frame of video") {
                     eprintln!("Error reading frame {i} from input video.  Skipping frame and continuing...");
-                    return Err(Error::VideoReadError("Could not read frame {frame} from video".to_string())) ;
+                    return Err(Error::VideoReadError("Could not read frame {frame} from video".to_string()));
                 }
 
                 // Rotate
@@ -288,7 +288,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
             output_frame_size,
             true,
         )
-            .unwrap();
+        .unwrap();
 
         progressbar.inc(1);
         unsafe {
@@ -296,34 +296,35 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
         }
 
         pool.install(|| {
-            frames.extend((1..num_frames)
-                .into_par_iter()
-                .filter_map(|i| {
-                    // eprintln to prevent buffering issues with rayon
-                    eprintln!("Encoding frame {i} of {num_frames}");
-                    //std::io::stdout().flush().unwrap();
+            frames.extend(
+                (1..num_frames)
+                    .into_par_iter()
+                    .filter_map(|i| {
+                        // eprintln to prevent buffering issues with rayon
+                        eprintln!("Encoding frame {i} of {num_frames}");
+                        //std::io::stdout().flush().unwrap();
 
-                    if config.use_max_fps_for_output_video && i % frame_cut == 0 {
-                        return None;
-                    }
-
-                    // Check for cancellation
-                    unsafe {
-                        if CANCEL_REQUESTED {
+                        if config.use_max_fps_for_output_video && i % frame_cut == 0 {
                             return None;
                         }
-                        ENCODE_CURRENT_FRAME += 1;
-                    }
 
-                    let ascii = convert_opencv_video_to_ascii(&input_frames[i as usize], &config);
-                    let frame = encode_ascii_frame(&config, &ascii, &output_frame_size);
-                    progressbar.inc(1);
-                    unsafe {
-                        PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
-                    }
-                    Some(frame)
-                })
-                .collect::<Vec<Mat>>()
+                        // Check for cancellation
+                        unsafe {
+                            if CANCEL_REQUESTED {
+                                return None;
+                            }
+                            ENCODE_CURRENT_FRAME += 1;
+                        }
+
+                        let ascii = convert_opencv_video_to_ascii(&input_frames[i as usize], &config);
+                        let frame = encode_ascii_frame(&config, &ascii, &output_frame_size);
+                        progressbar.inc(1);
+                        unsafe {
+                            PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
+                        }
+                        Some(frame)
+                    })
+                    .collect::<Vec<Mat>>(),
             );
         });
 
@@ -373,7 +374,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
             let read = capture.read(&mut frame.0).expect("Could not read frame of video");
             if !read {
                 eprintln!("Error reading frame {} from input video.  Skipping frame and continuing...", i);
-                return Err(Error::VideoReadError(format!("Could not read frame {i} from video"))) ;
+                return Err(Error::VideoReadError(format!("Could not read frame {i} from video")));
             }
 
             // Rotate
