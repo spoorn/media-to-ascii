@@ -16,8 +16,35 @@ interface VideoProgress {
 const processing = ref(false);
 const progress = ref<VideoProgress>({ percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 });
 
+const elapsedTime = ref(0);
+let timerInterval: number | null = null;
+
+function startTimer() {
+    const startTime = Date.now();
+    timerInterval = window.setInterval(() => {
+        elapsedTime.value = Math.floor((Date.now() - startTime) / 1000);
+    }, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    elapsedTime.value = 0;
+}
+
+function formatTime(seconds: number): string {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
 provide('processing', processing);
 provide('progress', progress);
+provide('startTimer', startTimer);
+provide('stopTimer', stopTimer);
 
 async function cancelProcessing() {
     await invoke('cancel_processing');
@@ -49,6 +76,12 @@ async function cancelProcessing() {
             <div>
               <p>
                 Write Frame {{ progress.currentWriteFrame }} of {{ progress.totalFrames }}
+              </p>
+            </div>
+
+            <div class="text-right">
+              <p>
+                Elapsed {{ formatTime(elapsedTime) }}
               </p>
             </div>
           </div>

@@ -23,6 +23,8 @@ const config = ref(defaultVideoConfig());
 const processError = ref<string | null>(null);
 const processing = inject<Ref<boolean>>('processing', ref(false));
 const progress = inject<Ref<VideoProgress>>('progress', ref({ percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 }));
+const startTimer = inject<() => void>('startTimer');
+const stopTimer = inject<() => void>('stopTimer');
 const selectedRotate = ref(-1);
 
 async function browseInputVideo() {
@@ -66,6 +68,7 @@ async function processVideo() {
     processError.value = null;
     processing.value = true;
     progress.value = { percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 };
+    startTimer?.();
 
     invoke('video_progress')
         .then(() => {
@@ -82,6 +85,7 @@ async function processVideo() {
         .finally(() => {
             processing.value = false;
             progress.value = { percentage: 0, currentReadFrame: 0, currentEncodeFrame: 0, currentWriteFrame: 0, totalFrames: 0 };
+            stopTimer?.();
         });
 }
 
