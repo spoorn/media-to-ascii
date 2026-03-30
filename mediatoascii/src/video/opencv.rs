@@ -2,11 +2,13 @@ use crate::image::generate_ascii_image;
 use crate::util::constants::{
     DARK_BGR_SCALAR, GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE, WHITE_BGR_SCALAR,
 };
-use crate::util::{get_size_from_ascii, UnsafeMat};
+use crate::util::{UnsafeMat, get_size_from_ascii};
+use crate::video::encoder::Encoder;
 use crate::video::errors::Error;
 use crate::video::reader::Reader;
-use crate::video::{VideoConfig, VideoResult, ENCODE_CURRENT_FRAME};
-use opencv::core::{Mat, MatTraitConst, MatTraitManual, Size, Vec3b, CV_8UC3};
+use crate::video::writer::Writer;
+use crate::video::{VideoConfig, VideoResult};
+use opencv::core::{CV_8UC3, Mat, MatTraitConst, MatTraitManual, Size, Vec3b};
 use opencv::hub_prelude::{VideoCaptureTraitConst, VideoWriterTrait};
 use opencv::videoio;
 use opencv::videoio::{VideoCaptureTrait, VideoWriter};
@@ -17,7 +19,6 @@ pub struct OpenCVVideoReader {
     total_frames: u64,
     fps: f64,
     frames: Vec<UnsafeMat>,
-    cursor: u64,
 }
 impl OpenCVVideoReader {
     pub fn new(video_path: &str) -> VideoResult<Self> {
@@ -30,7 +31,23 @@ impl OpenCVVideoReader {
         let fps =
             capture.get(videoio::CAP_PROP_FPS).map_err(|e| Error::VideoReadError(format!("Could not get fps: {e}")))?;
 
-        Ok(Self { capture, total_frames, fps, frames: Vec::with_capacity(total_frames as usize), cursor: 0 })
+        Ok(Self { capture, total_frames, fps, frames: Vec::with_capacity(total_frames as usize) })
+    }
+
+    fn read_single_frame(&mut self, config: &VideoConfig) -> VideoResult<UnsafeMat> {
+        let mut frame = UnsafeMat(Mat::default());
+
+        // CV_8UC3
+        if !self.capture.read(&mut frame.0).expect("Could not read frame of video") {
+            return Err(Error::VideoReadError("Could not read frame from video".to_string()));
+        }
+
+        // Rotate
+        if config.should_rotate {
+            opencv::core::rotate(&frame.clone(), &mut frame.0, config.rotate).unwrap();
+        }
+
+        Ok(frame)
     }
 }
 
@@ -43,22 +60,16 @@ impl Reader for OpenCVVideoReader {
         self.fps
     }
 
-    fn read_frame(&mut self, should_rotate: bool, rotate: i32) -> VideoResult<()> {
-        let mut frame = UnsafeMat(Mat::default());
-
-        // CV_8UC3
-        if !self.capture.read(&mut frame.0).expect("Could not read frame of video") {
-            return Err(Error::VideoReadError(format!("Could not read frame {} from video", self.cursor)));
-        }
-
-        // Rotate
-        if should_rotate {
-            opencv::core::rotate(&frame.clone(), &mut frame.0, rotate).unwrap();
-        }
-
+    fn read_frame(&mut self, config: &VideoConfig) -> VideoResult<()> {
+        let frame = self.read_single_frame(config)?;
         self.frames.push(frame);
 
         Ok(())
+    }
+
+    fn read_frame_as_ascii(&mut self, config: &VideoConfig) -> VideoResult<Vec<Vec<&str>>> {
+        let frame = self.read_single_frame(config)?;
+        Ok(convert_opencv_video_to_ascii(&frame, &config))
     }
 
     fn finish(&mut self) -> VideoResult<()> {
@@ -80,10 +91,6 @@ impl OpenCVVideoWriter {
 
         let input_frames = reader.frames;
         let ascii = convert_opencv_video_to_ascii(&input_frames[0], &config);
-        unsafe {
-            ENCODE_CURRENT_FRAME = 1;
-        }
-        // Initialize VideoWriter for real
         let (width, height) = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
         // Openh264 codec seems to have this dimension limitation so we cap it
         if width * height > 9437184 {
@@ -103,19 +110,14 @@ impl OpenCVVideoWriter {
             Size::new(width as i32, height as i32),
             true,
         )
-            .unwrap();
+        .unwrap();
 
-        Ok(Self {
-            writer: video_writer,
-            frames,
-            input_frames,
-            width,
-            height,
-            closed: false,
-        })
+        Ok(Self { writer: video_writer, frames, input_frames, width, height, closed: false })
     }
+}
 
-    pub fn encode_frame(&self, config: &VideoConfig, frame_index: usize) -> VideoResult<()> {
+impl Encoder for OpenCVVideoWriter {
+    fn encode_frame(&mut self, config: &VideoConfig, frame_index: usize) -> VideoResult<()> {
         let ascii = convert_opencv_video_to_ascii(&self.input_frames[frame_index], &config);
         let frame = encode_ascii_frame_opencv(&config, &ascii, self.width, self.height);
         unsafe {
@@ -124,13 +126,15 @@ impl OpenCVVideoWriter {
         }
         Ok(())
     }
+}
 
-    pub fn write_frame(&mut self, frame_index: usize) -> VideoResult<()> {
+impl Writer for OpenCVVideoWriter {
+    fn write_frame(&mut self, frame_index: usize) -> VideoResult<()> {
         write_to_ascii_video_opencv(&mut self.writer, &self.frames[frame_index]);
         Ok(())
     }
 
-    pub fn close(&mut self) -> VideoResult<()> {
+    fn close(&mut self) -> VideoResult<()> {
         if self.closed {
             Ok(())
         } else {

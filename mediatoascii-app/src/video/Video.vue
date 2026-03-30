@@ -216,19 +216,19 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                         />
                     </div>
 
-                    <div class="form-group">
-                        <label for="scale-down" class="block mb-0.5 text-sm font-medium">Num Threads</label>
-                        <small class="text-gray-500">Num Threads for parallel encoding</small>
-                        <InputNumber
-                            id="num-threads"
-                            v-model="config.num_threads"
-                            :min="1"
-                            :max="32"
-                            :step="1"
-                            :showButtons="true"
-                            :disabled="processing"
-                        />
-                    </div>
+<!--                    <div class="form-group">-->
+<!--                        <label for="scale-down" class="block mb-0.5 text-sm font-medium">Num Threads</label>-->
+<!--                        <small class="text-gray-500">Num Threads for parallel encoding</small>-->
+<!--                        <InputNumber-->
+<!--                            id="num-threads"-->
+<!--                            v-model="config.num_threads"-->
+<!--                            :min="1"-->
+<!--                            :max="32"-->
+<!--                            :step="1"-->
+<!--                            :showButtons="true"-->
+<!--                            :disabled="processing"-->
+<!--                        />-->
+<!--                    </div>-->
 
                     <div class="form-group">
                         <label for="max-fps" class="block mb-0.5 text-sm font-medium">Max FPS</label>

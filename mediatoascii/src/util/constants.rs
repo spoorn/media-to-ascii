@@ -20,6 +20,10 @@ pub static DARK_BGR_SCALAR: Scalar = Scalar::new(54.0, 42.0, 40.0, 0.0);
 /// for the video dimensions so the text fits to the frames' ends
 /// See https://github.com/spoorn/media-to-ascii/issues/2
 pub const MAGIC_HEIGHT_TO_WIDTH_RATIO: f32 = 2.046;
+
+/// Default bitrate
+pub const DEFAULT_BITRATE: u64 = 4_000_000;
+
 pub static CASCADIA_FONT: LazyLock<FontRef> =
     LazyLock::new(|| FontRef::try_from_slice(include_bytes!("fonts/Cascadia.ttf")).unwrap());
 

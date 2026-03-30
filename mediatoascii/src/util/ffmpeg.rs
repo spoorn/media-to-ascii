@@ -23,14 +23,14 @@ impl FFmpegFrame {
             data[offset + 2], // B
         )
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.width == 0 && self.height == 0
+    }
 }
 
 impl Default for FFmpegFrame {
     fn default() -> Self {
-        Self {
-            frame: FfmpegVideoFrame::empty(),
-            width: 0,
-            height: 0,
-        }
+        Self { frame: FfmpegVideoFrame::empty(), width: 0, height: 0 }
     }
 }

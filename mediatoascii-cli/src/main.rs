@@ -1,8 +1,7 @@
 use clap::{ArgGroup, Parser};
-use std::thread::available_parallelism;
 
 use mediatoascii::image::{ImageConfigBuilder, process_image};
-use mediatoascii::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;
+use mediatoascii::util::constants::{DEFAULT_BITRATE, MAGIC_HEIGHT_TO_WIDTH_RATIO};
 use mediatoascii::video::{VideoConfigBuilder, process_video};
 
 /// Converts media (images and videos) to ascii, and displays output either as an output media file
@@ -54,6 +53,9 @@ struct Cli {
     /// max_fps=10 for smoother visuals.
     #[clap(long, value_parser)]
     max_fps: Option<u64>,
+    /// Bitrate for output video file when using ffmpeg
+    #[clap(long, default_value_t = DEFAULT_BITRATE, value_parser)]
+    bitrate: u64,
     /// For images, if output_file_path is specified, will save the ascii text as-is to the output
     /// rather than an image file.
     #[clap(long, action)]
@@ -131,7 +133,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .invert(cli.invert)
             .overwrite(cli.overwrite)
             .use_max_fps_for_output_video(cli.use_max_fps_for_output_video)
-            .num_threads(cli.num_threads.unwrap_or_else(|| available_parallelism().unwrap().get() as u8));
+            .bitrate(cli.bitrate);
+        //.num_threads(cli.num_threads.unwrap_or_else(|| available_parallelism().unwrap().get() as u8));
 
         if let Some(max_fps) = cli.max_fps {
             config_builder.max_fps(max_fps);
