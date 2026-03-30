@@ -28,6 +28,7 @@ const startTimer = inject<() => void>('startTimer');
 const stopTimer = inject<() => void>('stopTimer');
 const selectedRotate = ref(-1);
 const selectedBackend = ref(false);
+const useBitrate = ref(false);
 
 async function browseInputVideo() {
     const selected = await open({
@@ -68,6 +69,7 @@ async function browseOutputVideo() {
 async function processVideo() {
     config.value.rotate = selectedRotate.value;
     config.value.use_opencv = selectedBackend.value;
+    config.value.bitrate = useBitrate.value ? config.value.bitrate : undefined;
     processError.value = null;
     processing.value = true;
     anyProcessed.value = true;
@@ -260,6 +262,23 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                             :max="120"
                             :step="1"
                             :disabled="processing"
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bitrate" class="block mb-0.5 text-sm font-medium">Bitrate</label>
+                        <div class="flex items-center gap-2 my-2">
+                            <Checkbox v-model="useBitrate" :binary="true" :disabled="processing" />
+                            <label for="use-bitrate" class="text-sm">Use custom bitrate</label>
+                        </div>
+                        <InputNumber
+                            id="bitrate"
+                            v-model="config.bitrate"
+                            :min="100000"
+                            :max="100000000"
+                            :step="100000"
+                            :disabled="processing || !useBitrate"
+                            placeholder="e.g. 4000000"
                         />
                     </div>
                 </div>

@@ -1,5 +1,5 @@
 use ffmpeg_next::codec::Id;
-use ffmpeg_next::format::{Pixel, input, output};
+use ffmpeg_next::format::{input, output, Pixel};
 use ffmpeg_next::media::Type;
 use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
 use ffmpeg_next::util::frame::video::Video as FfmpegVideoFrame;
@@ -7,13 +7,13 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelI
 
 use crate::image::generate_ascii_image;
 use crate::util::constants::{GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE};
-use crate::util::{FFmpegFrame, get_size_from_ascii};
-use crate::video::VideoConfig;
-use crate::video::VideoResult;
+use crate::util::{get_size_from_ascii, FFmpegFrame};
 use crate::video::encoder::Encoder;
 use crate::video::errors::Error;
 use crate::video::reader::Reader;
 use crate::video::writer::Writer;
+use crate::video::VideoConfig;
+use crate::video::VideoResult;
 
 /// We scale the time base and frame index as low values seem to skew ffmpeg's internal timestamp
 /// calculations and cause weird things like make a 2 second 30fps video output 15360 FPS for 4ms
@@ -236,8 +236,9 @@ impl FFmpegVideoWriter {
         video_encoder.set_format(Pixel::YUV420P);
         video_encoder.set_frame_rate(Some(ffmpeg_next::Rational::new(reader.fps as i32, 1)));
         video_encoder.set_time_base(time_base);
-        // TODO: make bitrate configurable
-        //video_encoder.set_bit_rate(config.bitrate as usize);
+        if let Some(bitrate) = config.bitrate {
+            video_encoder.set_bit_rate(bitrate as usize);
+        }
         video_encoder.set_gop(250);
 
         if output.format().flags().contains(ffmpeg_next::format::flag::Flags::GLOBAL_HEADER) {

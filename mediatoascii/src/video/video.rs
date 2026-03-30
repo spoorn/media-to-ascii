@@ -4,7 +4,7 @@ use std::thread::sleep;
 use std::time::{Duration, SystemTime};
 
 use crate::util::ascii_to_str;
-use crate::util::constants::{DEFAULT_BITRATE, MAGIC_HEIGHT_TO_WIDTH_RATIO};
+use crate::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;
 use crate::util::file_util::{check_file_exists, check_valid_file};
 use crate::video::encoder::Encoder;
 use crate::video::errors::Error;
@@ -64,7 +64,7 @@ pub struct VideoConfig {
     /// max_fps=10 for smoother visuals.
     pub max_fps: u64,
     /// Bitrate for video output, when using ffmpeg
-    pub bitrate: u64,
+    pub bitrate: Option<u64>,
     /// Output file path.  If omitted, output will be written to console.
     /// Supports most image formats, and .mp4 video outputs.
     /// Images will be resized to fit the ascii text.  Videos will honor the aspect ratio of the
@@ -91,7 +91,7 @@ impl Default for VideoConfig {
             height_sample_scale: MAGIC_HEIGHT_TO_WIDTH_RATIO,
             invert: false,
             max_fps: 10,
-            bitrate: DEFAULT_BITRATE,
+            bitrate: None,
             output_video_path: None,
             overwrite: false,
             use_max_fps_for_output_video: false,

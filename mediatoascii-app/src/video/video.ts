@@ -5,7 +5,7 @@ export interface VideoConfig {
     height_sample_scale: number;
     invert: boolean;
     max_fps: number;
-    bitrate: number;
+    bitrate?: number;
     output_video_path: string | null;
     overwrite: boolean;
     use_max_fps_for_output_video: boolean;
@@ -23,7 +23,6 @@ export function defaultVideoConfig(): VideoConfig {
         height_sample_scale: 2.046,
         invert: false,
         max_fps: 10,
-        bitrate: 4000000,
         overwrite: true, // Always true - rely on dialog box warning when file exists
         use_max_fps_for_output_video: false,
         rotate: -1,
