@@ -35,6 +35,37 @@ jobs:
       - name: Install Tauri dependencies
         run: sudo apt update && sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
+      - name: Install ffmpeg dependencies
+        run: sudo apt install git yasm nasm libx264-dev xz-utils
+
+      - name: Install ffmpeg (static)
+        run: |
+          wget https://ffmpeg.org/releases/ffmpeg-8.1.tar.xz
+          tar xf ffmpeg-8.1.tar.xz
+          cd ffmpeg-8.1
+          ./configure \
+            --prefix="$HOME/ffmpeg-static" \
+            --disable-shared \
+            --enable-static \
+            --disable-debug \
+            --disable-doc \
+            --disable-programs \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --disable-everything \
+            --enable-avcodec \
+            --enable-avformat \
+            --enable-avutil \
+            --enable-swscale \
+            --enable-swresample \
+            --enable-gpl \
+            --enable-libx264 \
+            --extra-cflags="-I$HOME/ffmpeg-static/include" \
+            --extra-ldflags="-L$HOME/ffmpeg-static/lib"
+          make -j$(nproc)
+          make install
+          echo "FFMPEG_DIR=$HOME/ffmpeg-static" >> $GITHUB_ENV
+
       # Install opencv
       #- name: Install opencv
       #  run: sudo apt install libopencv-dev clang libclang-dev
@@ -104,10 +135,41 @@ jobs:
       - name: brew bash
         run: brew install bash
 
+      - name: Install ffmpeg dependencies
+        run: brew install yasm nasm x264
+
       # dynamic link libclang correctly, according to https://github.com/twistedfall/opencv-rust
       - name: Dynamic Link libclang
         #shell: /usr/local/bin/bash {0}
         run: echo "DYLD_FALLBACK_LIBRARY_PATH=$(xcode-select --print-path)/Toolchains/XcodeDefault.xctoolchain/usr/lib/" >> $GITHUB_ENV
+
+      - name: Install ffmpeg (static)
+        run: |
+          wget https://ffmpeg.org/releases/ffmpeg-8.1.tar.xz
+          tar xf ffmpeg-8.1.tar.xz
+          cd ffmpeg-8.1
+          ./configure \
+            --prefix="$HOME/ffmpeg-static" \
+            --disable-shared \
+            --enable-static \
+            --disable-debug \
+            --disable-doc \
+            --disable-programs \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --disable-everything \
+            --enable-avcodec \
+            --enable-avformat \
+            --enable-avutil \
+            --enable-swscale \
+            --enable-swresample \
+            --enable-gpl \
+            --enable-libx264 \
+            --extra-cflags="-I$HOME/ffmpeg-static/include" \
+            --extra-ldflags="-L$HOME/ffmpeg-static/lib"
+          make -j$(sysctl -n hw.ncpu)
+          make install
+          echo "FFMPEG_DIR=$HOME/ffmpeg-static" >> $GITHUB_ENV
 
       # Install opencv
       #- name: Install opencv
@@ -198,6 +260,20 @@ jobs:
           # Docker image to use
           #image: # optional, default is ghcr.io/crazy-max/ghaction-chocolatey
 
+      - name: Install vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg
+          ./vcpkg/bootstrap-vcpkg.bat
+
+      # Uses dynamic CRT as Rust/ffmpeg-sys-next looks for that by default and this matches linux/macOS
+      - name: Install ffmpeg (static)
+        run: |
+          ./vcpkg/vcpkg install ffmpeg[core,ffmpeg,avdevice,swscale,swresample,x264]:x64-windows-static-md
+          echo "Listing packages:"
+          ./vcpkg/vcpkg list
+          $env:VCPKG_ROOT="${{ github.workspace }}/vcpkg"
+          dir "$env:VCPKG_ROOT\installed\x64-windows-static-md\include"
+
       # msbuild as our underlying builder
       #- name: Add msbuild to PATH
       #  uses: microsoft/setup-msbuild@v1.3.1
@@ -205,6 +281,9 @@ jobs:
       # Note: in order to set config profile to Release and use a prefix path, we have to separate cmake steps for building/installing.  CMake nuances...
       #    See https://stackoverflow.com/questions/19024259/how-to-change-the-build-type-to-release-mode-in-cmake, https://stackoverflow.com/questions/50028570/is-it-possible-to-build-cmake-projects-directly-using-msbuildtools, https://cmake.org/cmake/help/latest/variable/CMAKE_INSTALL_PREFIX.html
       # Pull opencv source, unzip, configure cmake, build, and install
+      # Override BUILD_WITH_STATIC_CRT as this defaults to ON for MSVC by opencv: https://github.com/opencv/opencv/blob/4.8.1/CMakeLists.txt#L493
+      # from https://stackoverflow.com/questions/77359521/failing-to-statically-link-to-opencv-4-7-0-using-cmake
+      # Also use MultiThreadedDLL for good measure to match ffmpeg's and Rust's default CRT
       # Disable image formats like jpeg, png, tiff, as we use rust image crate instead.  See https://docs.opencv.org/4.x/db/d05/tutorial_config_reference.html
       # Inspired from https://github.com/twistedfall/opencv-rust/issues/364
       - name: Install OpenCV static lib
@@ -214,7 +293,7 @@ jobs:
           unzip opencv.zip && rm opencv.zip
           unzip opencv_contrib.zip && rm opencv_contrib.zip
           mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO -DCMAKE_INSTALL_PREFIX="D:/opt/opencv" -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DWITH_PNG=OFF -DWITH_JPEG=OFF -DWITH_TIFF=OFF -DWITH_WEBP=OFF -DWITH_OPENJPEG=OFF -DWITH_JASPER=OFF -DWITH_OPENEXR=OFF -DWITH_V4L=OFF  -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH="../opencv_contrib-4.11.0/modules" ../opencv-4.11.0
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL -DBUILD_WITH_STATIC_CRT=OFF -DCMAKE_INSTALL_PREFIX="D:/opt/opencv" -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DWITH_PNG=OFF -DWITH_JPEG=OFF -DWITH_TIFF=OFF -DWITH_WEBP=OFF -DWITH_OPENJPEG=OFF -DWITH_JASPER=OFF -DWITH_OPENEXR=OFF -DWITH_V4L=OFF  -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH="../opencv_contrib-4.11.0/modules" ../opencv-4.11.0
           cmake --build . --target install --config Release --parallel 8
           cmake --install . --prefix D:/opt/opencv
           cd ..
@@ -238,6 +317,7 @@ jobs:
       # OPENCV_LINK_PATHS points to the installed staticlib folder after cmake install
       # OPENCV_INCLUDE_PATHS points to installed include folder after cmake install
       # OPENCV_MSVC_CRT is for CRT library to be static or dynamic using windows MSVC: https://github.com/twistedfall/opencv-rust/blob/master/README.md#troubleshooting
+      # We set it CRT to be dynamic to match ffmpeg and Rust defaults, and linux/macOS
       # Build
       - name: Build
         #run: $env:OPENCV_LINK_LIBS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty Name); $env:OPENCV_LINK_PATHS=$(Get-ChildItem -Path C:\tools -Recurse -Filter 'opencv_world*.lib' | Select-Object -first 1 | Select-Object -ExpandProperty FullName | Split-Path -parent); $env:OPENCV_INCLUDE_PATHS="C:\tools\opencv\build\include"; cargo build --release
@@ -245,7 +325,9 @@ jobs:
           $env:OPENCV_LINK_LIBS="opencv_core4110,opencv_videoio4110,opencv_imgcodecs4110,opencv_imgproc4110,ippiw,ittnotify,ippicvmt,zlib"
           $env:OPENCV_LINK_PATHS="D:/opt/opencv/x64/vc17/staticlib"
           $env:OPENCV_INCLUDE_PATHS="D:/opt/opencv/include"
-          $env:OPENCV_MSVC_CRT="static"
+          $env:OPENCV_MSVC_CRT="dynamic"
+          $env:VCPKG_ROOT="${{ github.workspace }}/vcpkg"
+          $env:VCPKG_DEFAULT_TRIPLET="x64-windows-static-md"
           cargo build --release
 
       # Ready artifacts for upload

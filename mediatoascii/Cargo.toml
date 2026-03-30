@@ -28,7 +28,7 @@ derive_builder = "0.20.2"
 image = "0.25.6"
 imageproc = "0.25.0"
 indicatif = "0.17.11"
-ffmpeg-next = "^8"
+ffmpeg-next = { version = "^8", features = ["static"] }
 # clang-runtime due to https://github.com/zmwangx/rust-ffmpeg/issues/173
 opencv = { version = "0.94.4", default-features = false, features = ["videoio", "clang-runtime"] }
 rayon = "1.10.0"
