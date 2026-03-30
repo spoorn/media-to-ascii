@@ -7,6 +7,8 @@ pub enum Error {
     ResolutionTooLarge,
     #[error("Failed to read video file: {0}")]
     VideoReadError(String),
+    #[error("Failed to write video file: {0}")]
+    VideoWriteError(String),
     #[error("Operation cancelled")]
     Cancelled,
 }
