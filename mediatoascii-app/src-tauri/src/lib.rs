@@ -1,6 +1,6 @@
 use mediatoascii::video::{VideoConfig, VideoResult};
-use std::path::Path;
 use serde::Serialize;
+use std::path::Path;
 use tauri::{AppHandle, Emitter};
 
 #[derive(Clone, Serialize)]
@@ -26,13 +26,17 @@ async fn process_video(config: VideoConfig) -> VideoResult<()> {
 async fn video_progress(app: AppHandle) {
     unsafe {
         loop {
-            app.emit("video-progress", VideoProgressInfo {
-                percentage: mediatoascii::video::PROGRESS_PERCENTAGE,
-                current_read_frame: mediatoascii::video::READ_CURRENT_FRAME,
-                current_encode_frame: mediatoascii::video::ENCODE_CURRENT_FRAME,
-                current_write_frame: mediatoascii::video::WRITE_CURRENT_FRAME,
-                total_frames: mediatoascii::video::TOTAL_FRAMES,
-            }).unwrap();
+            app.emit(
+                "video-progress",
+                VideoProgressInfo {
+                    percentage: mediatoascii::video::PROGRESS_PERCENTAGE,
+                    current_read_frame: mediatoascii::video::READ_CURRENT_FRAME,
+                    current_encode_frame: mediatoascii::video::ENCODE_CURRENT_FRAME,
+                    current_write_frame: mediatoascii::video::WRITE_CURRENT_FRAME,
+                    total_frames: mediatoascii::video::TOTAL_FRAMES,
+                },
+            )
+            .unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
     }

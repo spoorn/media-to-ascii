@@ -1,5 +1,5 @@
-use std::thread::available_parallelism;
 use clap::{ArgGroup, Parser};
+use std::thread::available_parallelism;
 
 use mediatoascii::image::{ImageConfigBuilder, process_image};
 use mediatoascii::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;

@@ -1,49 +1,77 @@
 use ffmpeg_next::codec::Id;
-use ffmpeg_next::format::{input, output, Pixel};
+use ffmpeg_next::format::{Pixel, input, output};
 use ffmpeg_next::media::Type;
 use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
 use ffmpeg_next::util::frame::video::Video as FfmpegVideoFrame;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::image::generate_ascii_image;
-use crate::util::constants::{GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE};
 use crate::util::FFmpegFrame;
-use crate::video::errors::Error;
+use crate::util::constants::{GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE};
 use crate::video::VideoConfig;
 use crate::video::VideoResult;
+use crate::video::errors::Error;
 
-pub fn read_video_frames_ffmpeg(path: &str) -> VideoResult<Vec<FFmpegFrame>> {
-    ffmpeg_next::init().map_err(|e| Error::VideoReadError(format!("ffmpeg init error: {e}")))?;
+pub struct FFmpegVideoReader {
+    pub context: ffmpeg_next::format::context::Input,
+    pub video_stream_index: usize,
+    pub total_frames: u64,
+    pub fps: f64,
+    pub decoder: ffmpeg_next::codec::decoder::video::Video,
+    pub scaler: Context,
+}
 
-    let mut ictx = input(path).map_err(|e| Error::VideoReadError(format!("ffmpeg input error: {e}")))?;
+impl FFmpegVideoReader {
+    pub fn new(path: &str) -> VideoResult<Self> {
+        ffmpeg_next::init().map_err(|e| Error::VideoReadError(format!("ffmpeg init error: {e}")))?;
 
-    let video_stream = ictx
-        .streams()
-        .best(Type::Video)
-        .ok_or_else(|| Error::VideoReadError("ffmpeg error: no video stream found".to_string()))?;
-    let video_stream_index = video_stream.index();
+        let context = input(path).map_err(|e| Error::VideoReadError(format!("ffmpeg input error: {e}")))?;
 
-    let context_decoder = ffmpeg_next::codec::context::Context::from_parameters(video_stream.parameters())
-        .map_err(|e| Error::VideoReadError(format!("ffmpeg codec context error: {e}")))?;
-    let mut decoder =
-        context_decoder.decoder().video().map_err(|e| Error::VideoReadError(format!("ffmpeg decoder error: {e}")))?;
+        let video_stream = context
+            .streams()
+            .best(Type::Video)
+            .ok_or_else(|| Error::VideoReadError("ffmpeg error: no video stream found".to_string()))?;
+        let video_stream_index = video_stream.index();
 
-    let mut scaler = Context::get(
-        decoder.format(),
-        decoder.width(),
-        decoder.height(),
-        Pixel::RGB24,
-        decoder.width(),
-        decoder.height(),
-        // Flag has no effect here since we're not scaling resolution (only converting color format),
-        // but is required by the API
-        Flags::BILINEAR,
-    )
-    .map_err(|e| Error::VideoReadError(format!("ffmpeg scaler error: {e}")))?;
+        let total_frames = video_stream.frames() as u64;
 
+        let video_fps = video_stream.avg_frame_rate();
+        let fps = if video_fps.denominator() != 0 {
+            video_fps.numerator() as f64 / video_fps.denominator() as f64
+        } else {
+            0.0
+        };
+
+        let context_decoder = ffmpeg_next::codec::context::Context::from_parameters(video_stream.parameters())
+            .map_err(|e| Error::VideoReadError(format!("ffmpeg codec context error: {e}")))?;
+        let decoder = context_decoder
+            .decoder()
+            .video()
+            .map_err(|e| Error::VideoReadError(format!("ffmpeg decoder error: {e}")))?;
+
+        let scaler = Context::get(
+            decoder.format(),
+            decoder.width(),
+            decoder.height(),
+            Pixel::RGB24,
+            decoder.width(),
+            decoder.height(),
+            // Flag has no effect here since we're not scaling resolution (only converting color format),
+            // but is required by the API
+            Flags::BILINEAR,
+        )
+        .map_err(|e| Error::VideoReadError(format!("ffmpeg scaler error: {e}")))?;
+
+        Ok(Self { context, video_stream_index, total_frames, fps, decoder, scaler })
+    }
+}
+
+pub fn read_video_frames_ffmpeg(
+    FFmpegVideoReader { mut context, video_stream_index, total_frames:_, fps: _, mut decoder, mut scaler}: FFmpegVideoReader,
+) -> VideoResult<Vec<FFmpegFrame>> {
     let mut frames: Vec<FFmpegFrame> = Vec::new();
 
-    for (stream, packet) in ictx.packets() {
+    for (stream, packet) in context.packets() {
         if stream.index() == video_stream_index {
             decoder
                 .send_packet(&packet)
@@ -121,14 +149,16 @@ impl FFmpegVideoWriter {
     pub fn new(output_path: &str, width: u32, height: u32, fps: i32, bitrate: usize) -> VideoResult<Self> {
         ffmpeg_next::init().map_err(|e| Error::VideoWriteError(format!("ffmpeg init error: {e}")))?;
 
-        let mut output = output(output_path)
-            .map_err(|e| Error::VideoWriteError(format!("ffmpeg output creation error: {e}")))?;
+        let mut output =
+            output(output_path).map_err(|e| Error::VideoWriteError(format!("ffmpeg output creation error: {e}")))?;
 
         let codec = ffmpeg_next::codec::encoder::find(Id::H264)
             .ok_or_else(|| Error::VideoWriteError("ffmpeg error: H264 codec not found".to_string()))?;
 
         let context_encoder = ffmpeg_next::codec::context::Context::new_with_codec(codec);
-        let mut video_encoder = context_encoder.encoder().video()
+        let mut video_encoder = context_encoder
+            .encoder()
+            .video()
             .map_err(|e| Error::VideoWriteError(format!("ffmpeg encoder error: {e}")))?;
 
         video_encoder.set_width(width);
@@ -143,10 +173,11 @@ impl FFmpegVideoWriter {
             video_encoder.set_flags(ffmpeg_next::codec::flag::Flags::GLOBAL_HEADER);
         }
 
-        let encoder = video_encoder.open().map_err(|e| Error::VideoWriteError(format!("ffmpeg encoder open error: {e}")))?;
+        let encoder =
+            video_encoder.open().map_err(|e| Error::VideoWriteError(format!("ffmpeg encoder open error: {e}")))?;
 
-        let mut stream = output.add_stream(codec)
-            .map_err(|e| Error::VideoWriteError(format!("ffmpeg add stream error: {e}")))?;
+        let mut stream =
+            output.add_stream(codec).map_err(|e| Error::VideoWriteError(format!("ffmpeg add stream error: {e}")))?;
         stream.set_parameters(&encoder);
         stream.set_time_base(ffmpeg_next::Rational::new(1, fps));
         let stream_index = stream.index();
@@ -160,7 +191,17 @@ impl FFmpegVideoWriter {
 
         output.write_header().map_err(|e| Error::VideoWriteError(format!("ffmpeg write header error: {e}")))?;
 
-        Ok(Self { context: output, stream_index, stream_time_base, encoder, scaler, width, height, frame_index: 0, closed: false })
+        Ok(Self {
+            context: output,
+            stream_index,
+            stream_time_base,
+            encoder,
+            scaler,
+            width,
+            height,
+            frame_index: 0,
+            closed: false,
+        })
     }
 
     fn flush_packets(&mut self) -> VideoResult<()> {
@@ -168,7 +209,9 @@ impl FFmpegVideoWriter {
         while self.encoder.receive_packet(&mut packet).is_ok() {
             packet.set_stream(self.stream_index);
             packet.rescale_ts(self.encoder.time_base(), self.stream_time_base);
-            packet.write_interleaved(&mut self.context).map_err(|e| Error::VideoWriteError(format!("ffmpeg write interleaved error: {e}")))?;
+            packet
+                .write_interleaved(&mut self.context)
+                .map_err(|e| Error::VideoWriteError(format!("ffmpeg write interleaved error: {e}")))?;
             packet = ffmpeg_next::codec::packet::Packet::empty();
         }
         Ok(())
@@ -204,7 +247,7 @@ pub fn encode_ascii_frame_ffmpeg(
     width: u32,
     height: u32,
     writer: &mut FFmpegVideoWriter,
-) -> VideoResult<()> {
+) -> VideoResult<FfmpegVideoFrame> {
     let frame = generate_ascii_image(ascii, width, height, config.invert, config.font_size);
 
     let mut rgb_frame = FfmpegVideoFrame::new(Pixel::RGB24, width, height);
@@ -229,9 +272,14 @@ pub fn encode_ascii_frame_ffmpeg(
         .run(&rgb_frame, &mut yuv_frame)
         .map_err(|e| Error::VideoWriteError(format!("ffmpeg scaler run error: {e}")))?;
 
+    Ok(yuv_frame)
+}
+
+#[inline]
+pub fn write_to_ascii_video_ffmpeg(writer: &mut FFmpegVideoWriter, yuv_frame: &FfmpegVideoFrame) -> VideoResult<()> {
     writer
         .encoder
-        .send_frame(&yuv_frame)
+        .send_frame(yuv_frame)
         .map_err(|e| Error::VideoWriteError(format!("ffmpeg send frame error: {e}")))?;
 
     writer.flush_packets()?;

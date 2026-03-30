@@ -10,7 +10,7 @@ use crate::util::constants::{
     RGB_TO_GREYSCALE, WHITE_RGB,
 };
 use crate::util::file_util::{check_file_exists, check_valid_file, write_to_file};
-use crate::util::{get_size_from_ascii, print_ascii, UnsafeImageBuffer};
+use crate::util::{UnsafeImageBuffer, get_size_from_ascii, print_ascii};
 
 #[derive(Builder, Debug)]
 #[builder(default)]
@@ -51,11 +51,7 @@ pub fn generate_ascii_image(
     let background_color = if invert { WHITE_RGB } else { DARK_RGB };
     let text_color = if invert { BLACK_RGB } else { WHITE_RGB };
     //println!("image size: {:?}", size);
-    let frame = UnsafeImageBuffer(UnsafeCell::new(Some(RgbImage::from_pixel(
-        width,
-        height,
-        background_color,
-    ))));
+    let frame = UnsafeImageBuffer(UnsafeCell::new(Some(RgbImage::from_pixel(width, height, background_color))));
 
     // let mut flat_ascii = vec![];
     // ascii.iter().for_each(|row| {
@@ -143,15 +139,7 @@ pub fn process_image(config: ImageConfig) {
 
     if let Some(file) = config.output_image_path.as_ref() {
         let (width, height) = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
-        write_to_image(
-            file,
-            config.overwrite,
-            &ascii,
-            width,
-            height,
-            config.invert,
-            config.font_size,
-        );
+        write_to_image(file, config.overwrite, &ascii, width, height, config.invert, config.font_size);
     }
 
     if config.output_file_path.is_none() && config.output_image_path.is_none() {

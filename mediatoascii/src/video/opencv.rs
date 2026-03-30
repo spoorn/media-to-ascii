@@ -1,8 +1,35 @@
-use opencv::core::{MatTraitConst, Vec3b};
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
-use crate::util::constants::{GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE};
+use crate::image::generate_ascii_image;
 use crate::util::UnsafeMat;
-use crate::video::VideoConfig;
+use crate::util::constants::{
+    DARK_BGR_SCALAR, GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREYSCALE, WHITE_BGR_SCALAR,
+};
+use crate::video::errors::Error;
+use crate::video::{VideoConfig, VideoResult};
+use opencv::core::{CV_8UC3, Mat, MatTraitConst, MatTraitManual, Vec3b};
+use opencv::hub_prelude::{VideoCaptureTraitConst, VideoWriterTrait};
+use opencv::videoio;
+use opencv::videoio::VideoWriter;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+
+pub struct OpenCVVideoReader {
+    pub capture: videoio::VideoCapture,
+    pub total_frames: u64,
+    pub fps: f64,
+}
+impl OpenCVVideoReader {
+    pub fn new(video_path: &str) -> VideoResult<Self> {
+        let capture = videoio::VideoCapture::from_file(video_path, videoio::CAP_ANY)
+            .map_err(|e| Error::VideoReadError(format!("Could not open video file at {video_path}: {e}")))?;
+        let total_frames = capture
+            .get(videoio::CAP_PROP_FRAME_COUNT)
+            .map_err(|e| Error::VideoReadError(format!("Could not get number of frames: {e}")))?
+            as u64;
+        let fps =
+            capture.get(videoio::CAP_PROP_FPS).map_err(|e| Error::VideoReadError(format!("Could not get fps: {e}")))?;
+
+        Ok(Self { capture, total_frames, fps })
+    }
+}
 
 /// Converts an opencv frame Matrix into ascii representation 2-d Vector
 ///
@@ -41,4 +68,33 @@ pub fn convert_opencv_video_to_ascii(frame: &UnsafeMat, config: &VideoConfig) ->
     });
 
     res
+}
+
+pub fn encode_ascii_frame_opencv(config: &VideoConfig, ascii: &[Vec<&str>], width: u32, height: u32) -> Mat {
+    let frame = generate_ascii_image(ascii, width, height, config.invert, config.font_size);
+    //println!("image frame width: {}, height: {}", frame.width(), frame.height());
+
+    // Create opencv CV_8UC3 frame
+    // opencv uses BGR format
+    let bgr_background_color = if config.invert { WHITE_BGR_SCALAR } else { DARK_BGR_SCALAR };
+
+    let mut opencv_frame =
+        Mat::new_rows_cols_with_default(frame.height() as i32, frame.width() as i32, CV_8UC3, bgr_background_color)
+            .unwrap();
+
+    // Writing per row is much faster than reading and writing each pixel
+    frame.enumerate_rows().for_each(|(row, x)| {
+        let row_pixels: Vec<Vec3b> = x.map(|(_, _, pix)| Vec3b::from([pix[2], pix[1], pix[0]])).collect();
+
+        opencv_frame.at_row_mut::<Vec3b>(row as i32).unwrap().iter_mut().enumerate().for_each(|(i, pix)| {
+            *pix = row_pixels[i];
+        })
+    });
+
+    opencv_frame
+}
+
+#[inline]
+pub fn write_to_ascii_video_opencv(video_writer: &mut VideoWriter, opencv_frame: &Mat) {
+    video_writer.write(opencv_frame).expect("Could not write frame to video");
 }

@@ -3,23 +3,19 @@ use std::io::Write;
 use std::thread::{available_parallelism, sleep};
 use std::time::{Duration, SystemTime};
 
-use crate::image::generate_ascii_image;
-use crate::util::constants::{
-    DARK_BGR_SCALAR, MAGIC_HEIGHT_TO_WIDTH_RATIO,
-    WHITE_BGR_SCALAR,
-};
+use crate::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;
 use crate::util::file_util::{check_file_exists, check_valid_file};
-use crate::util::{ascii_to_str, get_size_from_ascii, UnsafeMat};
+use crate::util::{UnsafeMat, ascii_to_str, get_size_from_ascii};
 use crate::video;
 use crate::video::errors::Error;
+use crate::video::opencv::OpenCVVideoReader;
 use derive_builder::Builder;
 use indicatif::ProgressBar;
-use opencv::core::{Mat, MatTraitManual, Size, Vec3b, CV_8UC3};
-use opencv::videoio;
-use opencv::videoio::{VideoCaptureTrait, VideoCaptureTraitConst, VideoWriter, VideoWriterTrait, CAP_ANY};
+use opencv::core::{Mat, Size};
+use opencv::videoio::{VideoCaptureTrait, VideoWriter, VideoWriterTrait};
+use rayon::ThreadPoolBuilder;
 use rayon::iter::IntoParallelIterator;
 use rayon::prelude::ParallelIterator;
-use rayon::ThreadPoolBuilder;
 use serde::Deserialize;
 
 /// We track progress percentage in a global static mut as we only support 1 job at a time right now
@@ -101,35 +97,6 @@ impl Default for VideoConfig {
     }
 }
 
-pub fn encode_ascii_frame(config: &VideoConfig, ascii: &[Vec<&str>], width: u32, height: u32) -> Mat {
-    let frame = generate_ascii_image(ascii, width, height, config.invert, config.font_size);
-    //println!("image frame width: {}, height: {}", frame.width(), frame.height());
-
-    // Create opencv CV_8UC3 frame
-    // opencv uses BGR format
-    let bgr_background_color = if config.invert { WHITE_BGR_SCALAR } else { DARK_BGR_SCALAR };
-
-    let mut opencv_frame =
-        Mat::new_rows_cols_with_default(frame.height() as i32, frame.width() as i32, CV_8UC3, bgr_background_color)
-            .unwrap();
-
-    // Writing per row is much faster than reading and writing each pixel
-    frame.enumerate_rows().for_each(|(row, x)| {
-        let row_pixels: Vec<Vec3b> = x.map(|(_, _, pix)| Vec3b::from([pix[2], pix[1], pix[0]])).collect();
-
-        opencv_frame.at_row_mut::<Vec3b>(row as i32).unwrap().iter_mut().enumerate().for_each(|(i, pix)| {
-            *pix = row_pixels[i];
-        })
-    });
-
-    opencv_frame
-}
-
-#[inline]
-pub fn write_to_ascii_video(video_writer: &mut VideoWriter, opencv_frame: &Mat) {
-    video_writer.write(opencv_frame).expect("Could not write frame to video");
-}
-
 /// Processes video
 ///
 /// References https://github.com/luketio/asciiframe/blob/7f23d8843278ad9cd4b53ff7110005aceeec1fcb/src/renderer.rs#L69.
@@ -156,9 +123,8 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
         check_file_exists(output_video_path.unwrap(), config.overwrite);
     }
 
-    let mut capture = videoio::VideoCapture::from_file(video_path, CAP_ANY)
-        .unwrap_or_else(|_| panic!("Could not open video file at {video_path}"));
-    let num_frames = capture.get(videoio::CAP_PROP_FRAME_COUNT).unwrap() as u64;
+    let mut reader = OpenCVVideoReader::new(video_path)?;
+    let num_frames = reader.total_frames;
     unsafe {
         TOTAL_FRAMES = num_frames;
     }
@@ -167,7 +133,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
         return Ok(());
     }
 
-    let orig_fps = capture.get(videoio::CAP_PROP_FPS).unwrap();
+    let orig_fps = reader.fps;
     let frame_time = 1.0 / orig_fps;
 
     let stdout = io::stdout();
@@ -205,7 +171,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                 let mut frame = UnsafeMat(Mat::default());
 
                 // CV_8UC3
-                if !capture.read(&mut frame.0).expect("Could not read frame of video") {
+                if !reader.capture.read(&mut frame.0).expect("Could not read frame of video") {
                     eprintln!("Error reading frame {i} from input video.  Skipping frame and continuing...");
                     return Err(Error::VideoReadError("Could not read frame {frame} from video".to_string()));
                 }
@@ -238,7 +204,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
             // a * b <= 9437184
             return Err(Error::ResolutionTooLarge);
         }
-        frames.push(encode_ascii_frame(&config, &ascii, width, height));
+        frames.push(video::opencv::encode_ascii_frame_opencv(&config, &ascii, width, height));
 
         //println!("frame size: {:?}", output_frame_size);
         let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
@@ -279,7 +245,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                         }
 
                         let ascii = video::opencv::convert_opencv_video_to_ascii(&input_frames[i as usize], &config);
-                        let frame = encode_ascii_frame(&config, &ascii, width, height);
+                        let frame = video::opencv::encode_ascii_frame_opencv(&config, &ascii, width, height);
                         progressbar.inc(1);
                         unsafe {
                             PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
@@ -315,7 +281,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                 PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
             }
 
-            write_to_ascii_video(&mut video_writer, &ascii);
+            video::opencv::write_to_ascii_video_opencv(&mut video_writer, &ascii);
         }
 
         // Writes the video explicitly just for clarity
@@ -333,7 +299,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
 
             // CV_8UC3
             // TODO: error handling
-            let read = capture.read(&mut frame.0).expect("Could not read frame of video");
+            let read = reader.capture.read(&mut frame.0).expect("Could not read frame of video");
             if !read {
                 eprintln!("Error reading frame {} from input video.  Skipping frame and continuing...", i);
                 return Err(Error::VideoReadError(format!("Could not read frame {i} from video")));
