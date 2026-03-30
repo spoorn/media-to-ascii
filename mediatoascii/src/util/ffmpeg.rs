@@ -1,5 +1,6 @@
 use ffmpeg_next::util::frame::video::Video as FfmpegVideoFrame;
 
+#[derive(Clone)]
 pub struct FFmpegFrame {
     pub frame: FfmpegVideoFrame,
     pub width: u32,
@@ -21,5 +22,15 @@ impl FFmpegFrame {
             data[offset + 1], // G
             data[offset + 2], // B
         )
+    }
+}
+
+impl Default for FFmpegFrame {
+    fn default() -> Self {
+        Self {
+            frame: FfmpegVideoFrame::empty(),
+            width: 0,
+            height: 0,
+        }
     }
 }

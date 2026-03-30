@@ -11,14 +11,16 @@ use crate::util::constants::{GREYSCALE_RAMP, REVERSE_GREYSCALE_RAMP, RGB_TO_GREY
 use crate::video::VideoConfig;
 use crate::video::VideoResult;
 use crate::video::errors::Error;
+use crate::video::reader::Reader;
 
 pub struct FFmpegVideoReader {
     pub context: ffmpeg_next::format::context::Input,
     pub video_stream_index: usize,
-    pub total_frames: u64,
-    pub fps: f64,
-    pub decoder: ffmpeg_next::codec::decoder::video::Video,
-    pub scaler: Context,
+    total_frames: u64,
+    fps: f64,
+    frames: Vec<FFmpegFrame>,
+    decoder: ffmpeg_next::codec::decoder::video::Video,
+    scaler: Context,
 }
 
 impl FFmpegVideoReader {
@@ -62,15 +64,69 @@ impl FFmpegVideoReader {
         )
         .map_err(|e| Error::VideoReadError(format!("ffmpeg scaler error: {e}")))?;
 
-        Ok(Self { context, video_stream_index, total_frames, fps, decoder, scaler })
+        Ok(Self { context, video_stream_index, total_frames, fps, frames: vec![FFmpegFrame::default(); total_frames as usize], decoder, scaler })
+    }
+}
+
+impl Reader for FFmpegVideoReader {
+    fn total_frames(&self) -> u64 {
+        self.total_frames
+    }
+
+    fn fps(&self) -> f64 {
+        self.fps
+    }
+
+    fn read_frame(&mut self, should_rotate: bool, rotate: i32) -> VideoResult<()> {
+        let mut decoded = ffmpeg_next::util::frame::video::Video::empty();
+
+        loop {
+            // Try to receive a frame first
+            if self.decoder.receive_frame(&mut decoded).is_ok() {
+                let mut rgb_frame = ffmpeg_next::util::frame::video::Video::empty();
+                self.scaler
+                    .run(&decoded, &mut rgb_frame)
+                    .map_err(|e| Error::VideoReadError(format!("ffmpeg scaler run error: {e}")))?;
+                self.frames.push(FFmpegFrame::new(rgb_frame));
+                return Ok(());
+            }
+
+            // Otherwise, feed more packets
+            match self.context.packets().next() {
+                Some((stream, packet)) => {
+                    if stream.index() == self.video_stream_index {
+                        self.decoder
+                            .send_packet(&packet)
+                            .map_err(|e| Error::VideoReadError(format!("send packet error: {e}")))?;
+                    }
+                }
+                None => {
+                    // EOF, just continue until caller calls finish()
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    fn finish(&mut self) -> VideoResult<()> {
+        self.decoder.send_eof().map_err(|e| Error::VideoReadError(format!("ffmpeg send eof error: {e}")))?;
+        let mut decoded = ffmpeg_next::util::frame::video::Video::empty();
+        while self.decoder.receive_frame(&mut decoded).is_ok() {
+            let mut rgb_frame = ffmpeg_next::util::frame::video::Video::empty();
+            self.scaler
+                .run(&decoded, &mut rgb_frame)
+                .map_err(|e| Error::VideoReadError(format!("ffmpeg scaler run error: {e}")))?;
+            self.frames.push(FFmpegFrame::new(rgb_frame));
+            decoded = ffmpeg_next::util::frame::video::Video::empty();
+        }
+
+        Ok(())
     }
 }
 
 pub fn read_video_frames_ffmpeg(
-    FFmpegVideoReader { mut context, video_stream_index, total_frames:_, fps: _, mut decoder, mut scaler}: FFmpegVideoReader,
-) -> VideoResult<Vec<FFmpegFrame>> {
-    let mut frames: Vec<FFmpegFrame> = Vec::new();
-
+    FFmpegVideoReader { mut context, video_stream_index, total_frames:_, fps: _, mut frames, mut decoder, mut scaler}: FFmpegVideoReader,
+) -> VideoResult<()> {
     for (stream, packet) in context.packets() {
         if stream.index() == video_stream_index {
             decoder
@@ -99,7 +155,7 @@ pub fn read_video_frames_ffmpeg(
         decoded = ffmpeg_next::util::frame::video::Video::empty();
     }
 
-    Ok(frames)
+    Ok(())
 }
 
 /// Converts a ffmpeg frame into ascii representation 2-d Vector

@@ -5,17 +5,18 @@ use std::time::{Duration, SystemTime};
 
 use crate::util::constants::MAGIC_HEIGHT_TO_WIDTH_RATIO;
 use crate::util::file_util::{check_file_exists, check_valid_file};
-use crate::util::{UnsafeMat, ascii_to_str, get_size_from_ascii};
+use crate::util::{ascii_to_str, UnsafeMat};
 use crate::video;
 use crate::video::errors::Error;
-use crate::video::opencv::OpenCVVideoReader;
+use crate::video::opencv::{OpenCVVideoReader, OpenCVVideoWriter};
+use crate::video::reader::Reader;
 use derive_builder::Builder;
 use indicatif::ProgressBar;
-use opencv::core::{Mat, Size};
-use opencv::videoio::{VideoCaptureTrait, VideoWriter, VideoWriterTrait};
-use rayon::ThreadPoolBuilder;
+use opencv::core::Mat;
+use opencv::videoio::VideoCaptureTrait;
 use rayon::iter::IntoParallelIterator;
 use rayon::prelude::ParallelIterator;
+use rayon::ThreadPoolBuilder;
 use serde::Deserialize;
 
 /// We track progress percentage in a global static mut as we only support 1 job at a time right now
@@ -124,7 +125,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
     }
 
     let mut reader = OpenCVVideoReader::new(video_path)?;
-    let num_frames = reader.total_frames;
+    let num_frames = reader.total_frames();
     unsafe {
         TOTAL_FRAMES = num_frames;
     }
@@ -133,7 +134,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
         return Ok(());
     }
 
-    let orig_fps = reader.fps;
+    let orig_fps = reader.fps();
     let frame_time = 1.0 / orig_fps;
 
     let stdout = io::stdout();
@@ -154,9 +155,12 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
         // Triple progress bar for reading, encoding, then writing frames
         let progressbar = ProgressBar::new(num_frames * 3);
 
-        let input_frames = (0..num_frames)
+        (0..num_frames)
             .into_iter()
             .map(|i| {
+                // Process first frame to get output dimensions and initialize video writer
+                eprintln!("Reading frame {i} of {num_frames}");
+
                 unsafe {
                     if CANCEL_REQUESTED {
                         CANCEL_REQUESTED = false;
@@ -165,58 +169,23 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                     READ_CURRENT_FRAME += 1;
                 }
 
-                // Process first frame to get output dimensions and initialize video writer
-                eprintln!("Reading frame {i} of {num_frames}");
-
-                let mut frame = UnsafeMat(Mat::default());
-
-                // CV_8UC3
-                if !reader.capture.read(&mut frame.0).expect("Could not read frame of video") {
-                    eprintln!("Error reading frame {i} from input video.  Skipping frame and continuing...");
-                    return Err(Error::VideoReadError("Could not read frame {frame} from video".to_string()));
-                }
-
-                // Rotate
-                if should_rotate {
-                    opencv::core::rotate(&frame.clone(), &mut frame.0, config.rotate).unwrap();
-                }
+                reader.read_frame(should_rotate, config.rotate)
+                    .inspect_err(|_e| {
+                        eprintln!("Error reading frame {i} from input video",);
+                    })?;
 
                 progressbar.inc(1);
                 unsafe {
                     PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
                 }
 
-                Ok(frame)
+                Ok(())
             })
-            .collect::<VideoResult<Vec<UnsafeMat>>>()?;
+            .collect::<VideoResult<()>>()?;
 
-        let mut frames = Vec::new();
+        reader.finish()?;
 
-        let ascii = video::opencv::convert_opencv_video_to_ascii(&input_frames[0], &config);
-        unsafe {
-            ENCODE_CURRENT_FRAME = 1;
-        }
-        // Initialize VideoWriter for real
-        let (width, height) = get_size_from_ascii(&ascii, config.height_sample_scale, config.font_size);
-        // Openh264 codec seems to have this dimension limitation so we cap it
-        if width * height > 9437184 {
-            // a / b = width / height
-            // a * b <= 9437184
-            return Err(Error::ResolutionTooLarge);
-        }
-        frames.push(video::opencv::encode_ascii_frame_opencv(&config, &ascii, width, height));
-
-        //println!("frame size: {:?}", output_frame_size);
-        let video_fps = if config.use_max_fps_for_output_video { config.max_fps as f64 } else { orig_fps };
-        // TODO: allow any video output
-        let mut video_writer: VideoWriter = VideoWriter::new(
-            output_video_path.unwrap().as_str(),
-            VideoWriter::fourcc('a', 'v', 'c', '1').unwrap(),
-            video_fps,
-            Size::new(width as i32, height as i32),
-            true,
-        )
-        .unwrap();
+        let mut writer = OpenCVVideoWriter::new(&config, reader)?;
 
         progressbar.inc(1);
         unsafe {
@@ -224,37 +193,34 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
         }
 
         pool.install(|| {
-            frames.extend(
-                (1..num_frames)
-                    .into_par_iter()
-                    .filter_map(|i| {
-                        // eprintln to prevent buffering issues with rayon
-                        eprintln!("Encoding frame {i} of {num_frames}");
-                        //std::io::stdout().flush().unwrap();
+            (1..num_frames)
+                .into_par_iter()
+                .filter_map(|i| {
+                    // eprintln to prevent buffering issues with rayon
+                    eprintln!("Encoding frame {i} of {num_frames}");
+                    //std::io::stdout().flush().unwrap();
 
-                        if config.use_max_fps_for_output_video && i % frame_cut == 0 {
-                            return None;
-                        }
+                    if config.use_max_fps_for_output_video && i % frame_cut == 0 {
+                        return None;
+                    }
 
-                        // Check for cancellation
-                        unsafe {
-                            if CANCEL_REQUESTED {
-                                return None;
-                            }
-                            ENCODE_CURRENT_FRAME += 1;
+                    // Check for cancellation
+                    unsafe {
+                        if CANCEL_REQUESTED {
+                            return Some(Err(Error::Cancelled));
                         }
+                        ENCODE_CURRENT_FRAME += 1;
+                    }
 
-                        let ascii = video::opencv::convert_opencv_video_to_ascii(&input_frames[i as usize], &config);
-                        let frame = video::opencv::encode_ascii_frame_opencv(&config, &ascii, width, height);
-                        progressbar.inc(1);
-                        unsafe {
-                            PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
-                        }
-                        Some(frame)
-                    })
-                    .collect::<Vec<Mat>>(),
-            );
-        });
+                    let res = writer.encode_frame(&config, i as usize);
+                    progressbar.inc(1);
+                    unsafe {
+                        PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
+                    }
+                    Some(res)
+                })
+                .collect::<VideoResult<()>>()
+        })?;
 
         unsafe {
             if CANCEL_REQUESTED {
@@ -262,7 +228,7 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
             }
         }
 
-        for (i, ascii) in frames.into_iter().enumerate() {
+        for i in 0..num_frames {
             eprintln!("Writing frame {i} of {num_frames}");
 
             if config.use_max_fps_for_output_video && i as u64 % frame_cut == 0 {
@@ -276,16 +242,16 @@ pub fn process_video(config: VideoConfig) -> VideoResult<()> {
                 WRITE_CURRENT_FRAME += 1;
             }
 
+            writer.write_frame(i as usize)?;
+
             progressbar.inc(1);
             unsafe {
                 PROGRESS_PERCENTAGE = progressbar.position() as f32 / progressbar.length().unwrap() as f32;
             }
-
-            video::opencv::write_to_ascii_video_opencv(&mut video_writer, &ascii);
         }
 
         // Writes the video explicitly just for clarity
-        video_writer.release().unwrap();
+        writer.close()?;
         progressbar.finish();
         unsafe {
             PROGRESS_PERCENTAGE = 1.0;
