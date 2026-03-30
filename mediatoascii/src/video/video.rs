@@ -18,7 +18,7 @@ use opencv::core::{Mat, MatTraitManual, Size, Vec3b, CV_8UC3};
 use opencv::videoio;
 use opencv::videoio::{VideoCaptureTrait, VideoCaptureTraitConst, VideoWriter, VideoWriterTrait, CAP_ANY};
 use rayon::iter::IntoParallelIterator;
-use rayon::prelude::{IndexedParallelIterator, ParallelIterator};
+use rayon::prelude::ParallelIterator;
 use rayon::ThreadPoolBuilder;
 use serde::Deserialize;
 
