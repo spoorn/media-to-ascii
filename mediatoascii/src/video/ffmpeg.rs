@@ -222,11 +222,11 @@ impl FFmpegVideoWriter {
         // ffmpeg for h264 requires width/height to be divisible by 2
         let width = if width % 2 == 0 { width } else { width + 1 };
         let height = if height % 2 == 0 { height } else { height + 1 };
-        if width * height > 9437184 {
-            // a / b = width / height
-            // a * b <= 9437184
-            return Err(Error::ResolutionTooLarge);
-        }
+        // if width * height > 9437184 {
+        //     // a / b = width / height
+        //     // a * b <= 9437184
+        //     return Err(Error::ResolutionTooLarge);
+        // }
 
         let time_base = ffmpeg_next::Rational::new(1, reader.fps as i32 * TIME_BASE_SCALE);
         println!("fps: {}, time_base: {}/{}", reader.fps, time_base.numerator(), time_base.denominator());

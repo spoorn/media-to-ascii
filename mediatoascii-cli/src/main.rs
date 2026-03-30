@@ -139,7 +139,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .use_opencv(cli.use_opencv);
 
         if let Some(bitrate) = cli.bitrate {
-            config_builder.bitrate(bitrate);
+            config_builder.bitrate(Some(bitrate));
         }
         //.num_threads(cli.num_threads.unwrap_or_else(|| available_parallelism().unwrap().get() as u8));
 

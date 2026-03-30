@@ -76,6 +76,7 @@ pub struct VideoConfig {
     pub use_max_fps_for_output_video: bool,
     /// Rotate the input (0 = 90 CLOCKWISE, 1 = 180, 2 = 90 COUNTER-CLOCKWISE)
     pub rotate: i32,
+    #[serde(skip)]
     pub should_rotate: bool,
     pub use_opencv: bool,
     // /// Number of threads for parallel processing during encode step. [default: number of logical CPU cores]

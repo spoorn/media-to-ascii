@@ -140,8 +140,8 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                     <div class="form-group">
                         <label for="scale-down" class="block mb-0.5 text-sm font-medium">Scale Down</label>
                         <small class="text-gray-500 text-left">
-                            Multiplier to scale down input dimensions. For the output codec, you'll be required to scale
-                            down the video to a supported resolution. Recommend 4.0 or higher for 1080p inputs
+                            Multiplier to scale down input dimensions. Recommend 4.0 or higher for 1080p inputs.
+                            If using opencv, you'll be required to scale down the video to a supported resolution.
                         </small>
                         <InputNumber
                             id="scale-down"
@@ -172,48 +172,11 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
 
                     <div class="form-group">
                         <label for="rotate" class="block mb-0.5 text-sm font-medium">Rotate</label>
+                        <small class="text-gray-500">Only applies to opencv backend</small>
                         <Select
                             id="rotate"
                             v-model="selectedRotate"
                             :options="rotateOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            :disabled="processing"
-                            class="w-full"
-                        />
-                    </div>
-                </div>
-
-                <div class="settings-column">
-                    <h2 class="text-base font-semibold mb-2 border-b border-gray-600 pb-1">Output/Encoding Settings</h2>
-
-                    <div class="form-group">
-                        <label for="video-output" class="block mb-0.5 text-sm font-medium">Output Path</label>
-                        <small class="text-gray-500">Leave empty to play in terminal</small>
-                        <div class="flex gap-2">
-                            <InputText
-                                id="video-output"
-                                v-model="config.output_video_path"
-                                placeholder="Save as... (optional)"
-                                class="flex-1"
-                                :disabled="processing"
-                            />
-                            <Button
-                                type="button"
-                                label="Browse"
-                                :disabled="processing"
-                                @click="browseOutputVideo"
-                            />
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="backend" class="block mb-0.5 text-sm font-medium">Backend</label>
-                        <small class="text-gray-500">Video processing backend</small>
-                        <Select
-                            id="backend"
-                            v-model="selectedBackend"
-                            :options="backendOptions"
                             optionLabel="label"
                             optionValue="value"
                             :disabled="processing"
@@ -231,6 +194,62 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                             offLabel="Dark Background"
                             :disabled="processing"
                             class="w-full"
+                        />
+                    </div>
+                </div>
+
+                <div class="settings-column">
+                    <h2 class="text-base font-semibold mb-2 border-b border-gray-600 pb-1">Output/Encoding Settings</h2>
+
+                    <div class="form-group">
+                        <label for="video-output" class="block mb-0.5 text-sm font-medium">Output Path</label>
+                        <small class="text-gray-500">Leave empty to play in terminal</small>
+                        <div class="flex gap-2">
+                            <InputText
+                                id="video-output"
+                                v-model="config.output_video_path"
+                                placeholder="Save as..."
+                                class="flex-1"
+                                :disabled="processing"
+                            />
+                            <Button
+                                type="button"
+                                label="Browse"
+                                :disabled="processing"
+                                @click="browseOutputVideo"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="backend" class="block mb-0.5 text-sm font-medium">Backend</label>
+                        <small class="text-gray-500">Video processing backend [Recommended: ffmpeg]</small>
+                        <Select
+                            id="backend"
+                            v-model="selectedBackend"
+                            :options="backendOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            :disabled="processing"
+                            class="w-full"
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bitrate" class="block mb-0.5 text-sm font-medium">Bitrate</label>
+                        <small class="text-gray-500">If disabled, bitrate will be automatically calculated. Bitrate is in bytes/s</small>
+                        <div class="flex items-center gap-2 my-2">
+                            <Checkbox v-model="useBitrate" :binary="true" :disabled="processing" />
+                            <label for="use-bitrate" class="text-sm">Use custom bitrate</label>
+                        </div>
+                        <InputNumber
+                            id="bitrate"
+                            v-model="config.bitrate"
+                            :min="100000"
+                            :max="100000000"
+                            :step="100000"
+                            :disabled="processing || !useBitrate"
+                            placeholder="e.g. 4000000"
                         />
                     </div>
 
@@ -261,24 +280,7 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                             :min="1"
                             :max="120"
                             :step="1"
-                            :disabled="processing"
-                        />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="bitrate" class="block mb-0.5 text-sm font-medium">Bitrate</label>
-                        <div class="flex items-center gap-2 my-2">
-                            <Checkbox v-model="useBitrate" :binary="true" :disabled="processing" />
-                            <label for="use-bitrate" class="text-sm">Use custom bitrate</label>
-                        </div>
-                        <InputNumber
-                            id="bitrate"
-                            v-model="config.bitrate"
-                            :min="100000"
-                            :max="100000000"
-                            :step="100000"
-                            :disabled="processing || !useBitrate"
-                            placeholder="e.g. 4000000"
+                            :disabled="processing || !config.use_max_fps_for_output_video"
                         />
                     </div>
                 </div>
@@ -289,7 +291,7 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                     type="submit"
                     label="Asciify"
                     :loading="processing"
-                    :disabled="!config.video_path || processing"
+                    :disabled="!config.video_path || !config.output_video_path || processing"
                     class="w-full"
                     size="large"
                 />
