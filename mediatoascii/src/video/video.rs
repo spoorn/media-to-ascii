@@ -6,13 +6,13 @@ use std::time::{Duration, SystemTime};
 use crate::util::ascii_to_str;
 use crate::util::constants::{DEFAULT_BITRATE, MAGIC_HEIGHT_TO_WIDTH_RATIO};
 use crate::util::file_util::{check_file_exists, check_valid_file};
-use crate::video::FFmpegVideoWriter;
 use crate::video::encoder::Encoder;
 use crate::video::errors::Error;
 use crate::video::ffmpeg::FFmpegVideoReader;
 use crate::video::opencv::{OpenCVVideoReader, OpenCVVideoWriter};
 use crate::video::reader::Reader;
 use crate::video::writer::Writer;
+use crate::video::FFmpegVideoWriter;
 use derive_builder::Builder;
 use indicatif::ProgressBar;
 use serde::Deserialize;
@@ -77,6 +77,7 @@ pub struct VideoConfig {
     /// Rotate the input (0 = 90 CLOCKWISE, 1 = 180, 2 = 90 COUNTER-CLOCKWISE)
     pub rotate: i32,
     pub should_rotate: bool,
+    pub use_opencv: bool,
     // /// Number of threads for parallel processing during encode step. [default: number of logical CPU cores]
     // pub num_threads: u8,
 }
@@ -96,6 +97,7 @@ impl Default for VideoConfig {
             use_max_fps_for_output_video: false,
             rotate: -1,
             should_rotate: false,
+            use_opencv: false,
             // num_threads: available_parallelism().unwrap().get() as u8,
         }
     }
@@ -206,10 +208,10 @@ pub fn process_video(mut config: VideoConfig) -> VideoResult<()> {
         check_file_exists(output_video_path.unwrap(), config.overwrite);
     }
 
-    let mut reader = if true {
-        VideoReader::FFmpeg(FFmpegVideoReader::new(video_path)?)
-    } else {
+    let mut reader = if config.use_opencv {
         VideoReader::OpenCV(OpenCVVideoReader::new(video_path)?)
+    } else {
+        VideoReader::FFmpeg(FFmpegVideoReader::new(video_path)?)
     };
 
     let num_frames = reader.total_frames();

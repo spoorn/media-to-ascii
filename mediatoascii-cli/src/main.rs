@@ -1,8 +1,8 @@
 use clap::{ArgGroup, Parser};
 
-use mediatoascii::image::{ImageConfigBuilder, process_image};
+use mediatoascii::image::{process_image, ImageConfigBuilder};
 use mediatoascii::util::constants::{DEFAULT_BITRATE, MAGIC_HEIGHT_TO_WIDTH_RATIO};
-use mediatoascii::video::{VideoConfigBuilder, process_video};
+use mediatoascii::video::{process_video, VideoConfigBuilder};
 
 /// Converts media (images and videos) to ascii, and displays output either as an output media file
 /// or in the terminal.
@@ -75,6 +75,9 @@ struct Cli {
     /// Number of threads for parallel processing during encode step. [default: number of logical CPU cores]
     #[clap(long, value_parser)]
     num_threads: Option<u8>,
+    /// Use OpenCV for video processing instead of ffmpeg
+    #[clap(long, action)]
+    use_opencv: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -133,7 +136,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .invert(cli.invert)
             .overwrite(cli.overwrite)
             .use_max_fps_for_output_video(cli.use_max_fps_for_output_video)
-            .bitrate(cli.bitrate);
+            .bitrate(cli.bitrate)
+            .use_opencv(cli.use_opencv);
         //.num_threads(cli.num_threads.unwrap_or_else(|| available_parallelism().unwrap().get() as u8));
 
         if let Some(max_fps) = cli.max_fps {

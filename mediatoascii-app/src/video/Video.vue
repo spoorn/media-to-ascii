@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, inject, type Ref } from "vue";
-import { defaultVideoConfig, rotateOptions } from "./video.ts";
+import { defaultVideoConfig, rotateOptions, backendOptions } from "./video.ts";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
@@ -27,6 +27,7 @@ const progress = inject<Ref<VideoProgress>>('progress', ref({ percentage: 0, cur
 const startTimer = inject<() => void>('startTimer');
 const stopTimer = inject<() => void>('stopTimer');
 const selectedRotate = ref(-1);
+const selectedBackend = ref(false);
 
 async function browseInputVideo() {
     const selected = await open({
@@ -66,6 +67,7 @@ async function browseOutputVideo() {
 
 async function processVideo() {
     config.value.rotate = selectedRotate.value;
+    config.value.use_opencv = selectedBackend.value;
     processError.value = null;
     processing.value = true;
     anyProcessed.value = true;
@@ -201,6 +203,20 @@ listen<{ percentage: number; current_read_frame: number; current_encode_frame: n
                                 @click="browseOutputVideo"
                             />
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="backend" class="block mb-0.5 text-sm font-medium">Backend</label>
+                        <small class="text-gray-500">Video processing backend</small>
+                        <Select
+                            id="backend"
+                            v-model="selectedBackend"
+                            :options="backendOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            :disabled="processing"
+                            class="w-full"
+                        />
                     </div>
 
                     <div class="form-group">

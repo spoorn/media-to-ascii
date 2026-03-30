@@ -10,6 +10,7 @@ export interface VideoConfig {
     overwrite: boolean;
     use_max_fps_for_output_video: boolean;
     rotate: number;
+    use_opencv: boolean;
     //num_threads: number;
 }
 
@@ -26,6 +27,7 @@ export function defaultVideoConfig(): VideoConfig {
         overwrite: true, // Always true - rely on dialog box warning when file exists
         use_max_fps_for_output_video: false,
         rotate: -1,
+        use_opencv: false,
         //num_threads: getNumThreads(),
     };
 }
@@ -49,4 +51,14 @@ export const rotateOptions: RotateOption[] = [
     { label: "90° Clockwise", value: 0 },
     { label: "180° Flip", value: 1 },
     { label: "90° Counter-Clockwise", value: 2 },
+];
+
+export interface BackendOption {
+    label: string;
+    value: boolean;
+}
+
+export const backendOptions: BackendOption[] = [
+    { label: "ffmpeg", value: false },
+    { label: "opencv", value: true },
 ];
