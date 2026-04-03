@@ -26,7 +26,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
-      
+
       # Install rust
       - name: Install rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -100,22 +100,53 @@ jobs:
           ls -R /opt/opencv
           ls -R /usr/lib
           cargo build --release
+          # Persist OpenCV env vars for Tauri app build step
+          echo "OPENCV_LINK_LIBS=$OPENCV_LINK_LIBS" >> $GITHUB_ENV
+          echo "OPENCV_LINK_PATHS=$OPENCV_LINK_PATHS" >> $GITHUB_ENV
+          echo "OPENCV_INCLUDE_PATHS=$OPENCV_INCLUDE_PATHS" >> $GITHUB_ENV
 
-      # Ready artifacts for upload
-      - name: Prepare Artifacts
+      # Ready CLI artifacts for upload
+      - name: Prepare CLI Artifacts
         run: |
           export MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' mediatoascii-cli/Cargo.toml)
           mv target/release/mediatoascii-cli target/release/mediatoascii
           chmod +x target/release/mediatoascii
           mv codecs/libopenh264-1.8.0-linux64.4.so target/release/
-          tar -czvf mediatoascii-x86_64-unknown-linux-gnu-$MEDIATOASCII_VERSION.tar.gz -C target/release/ mediatoascii libopenh264-1.8.0-linux64.4.so
+          tar -czvf mediatoascii-cli-x86_64-unknown-linux-gnu-$MEDIATOASCII_VERSION.tar.gz -C target/release/ mediatoascii libopenh264-1.8.0-linux64.4.so
 
-      # Upload artifact: https://github.com/actions/upload-artifact
-      - name: Upload Artifacts
+      # Upload CLI artifact
+      - name: Upload CLI Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mediatoascii-x86_64-unknown-linux-gnu
-          path: mediatoascii-x86_64-unknown-linux-gnu-*.tar.gz
+          name: mediatoascii-cli-x86_64-unknown-linux-gnu
+          path: mediatoascii-cli-x86_64-unknown-linux-gnu-*.tar.gz
+          retention-days: 1
+
+      # Build Tauri App
+      - name: Install bun
+        run: curl -fsSL https://bun.sh/install | bash
+
+      - name: Install frontend dependencies
+        run: |
+          export BUN_INSTALL="$HOME/.bun"
+          export PATH="$BUN_INSTALL/bin:$PATH"
+          cd mediatoascii-app
+          bun install
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: mediatoascii-app
+          args: --release
+
+      # Upload App artifacts
+      - name: Upload App Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mediatoascii-app-x86_64-unknown-linux-gnu
+          path: |
+            mediatoascii-app/src-tauri/target/release/bundle/**/*.AppImage
+            mediatoascii-app/src-tauri/target/release/bundle/**/*.deb
           retention-days: 1
 
   macos-build:
@@ -208,22 +239,53 @@ jobs:
           ls -R /usr/lib
           ls -R /usr/local
           cargo build --release
+          # Persist OpenCV env vars for Tauri app build step
+          echo "OPENCV_LINK_LIBS=$OPENCV_LINK_LIBS" >> $GITHUB_ENV
+          echo "OPENCV_LINK_PATHS=$OPENCV_LINK_PATHS" >> $GITHUB_ENV
+          echo "OPENCV_INCLUDE_PATHS=$OPENCV_INCLUDE_PATHS" >> $GITHUB_ENV
 
-      # Ready artifacts for upload
-      - name: Prepare Artifacts
+      # Ready CLI artifacts for upload
+      - name: Prepare CLI Artifacts
         run: |
           export MEDIATOASCII_VERSION=$(perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' mediatoascii-cli/Cargo.toml)
           mv target/release/mediatoascii-cli target/release/mediatoascii
           chmod +x target/release/mediatoascii
           mv codecs/libopenh264-1.8.0-osx64.4.dylib target/release/
-          zip -j mediatoascii-x86_64-apple-darwin-$MEDIATOASCII_VERSION.zip target/release/mediatoascii target/release/libopenh264-1.8.0-osx64.4.dylib
+          zip -j mediatoascii-cli-x86_64-apple-darwin-$MEDIATOASCII_VERSION.zip target/release/mediatoascii target/release/libopenh264-1.8.0-osx64.4.dylib
 
-      # Upload artifact: https://github.com/actions/upload-artifact
-      - name: Upload Artifacts
+      # Upload CLI artifact
+      - name: Upload CLI Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mediatoascii-x86_64-apple-darwin
-          path: mediatoascii-x86_64-apple-darwin-*.zip
+          name: mediatoascii-cli-x86_64-apple-darwin
+          path: mediatoascii-cli-x86_64-apple-darwin-*.zip
+          retention-days: 1
+
+      # Build Tauri App
+      - name: Install bun
+        run: curl -fsSL https://bun.sh/install | bash
+
+      - name: Install frontend dependencies
+        run: |
+          export BUN_INSTALL="$HOME/.bun"
+          export PATH="$BUN_INSTALL/bin:$PATH"
+          cd mediatoascii-app
+          bun install
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: mediatoascii-app
+          args: --release
+
+      # Upload App artifacts
+      - name: Upload App Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mediatoascii-app-x86_64-apple-darwin
+          path: |
+            mediatoascii-app/src-tauri/target/release/bundle/**/*.dmg
+            mediatoascii-app/src-tauri/target/release/bundle/**/*.app
           retention-days: 1
 
   windows-build:
@@ -234,7 +296,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
-      
+
       # Install rust
       - name: Install rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -329,28 +391,54 @@ jobs:
           $env:VCPKG_ROOT="${{ github.workspace }}/vcpkg"
           $env:VCPKG_DEFAULT_TRIPLET="x64-windows-static-md"
           cargo build --release
+          # Persist OpenCV env vars for Tauri app build step
+          echo "OPENCV_LINK_LIBS=$env:OPENCV_LINK_LIBS" >> $env:GITHUB_ENV
+          echo "OPENCV_LINK_PATHS=$env:OPENCV_LINK_PATHS" >> $env:GITHUB_ENV
+          echo "OPENCV_INCLUDE_PATHS=$env:OPENCV_INCLUDE_PATHS" >> $env:GITHUB_ENV
+          echo "OPENCV_MSVC_CRT=$env:OPENCV_MSVC_CRT" >> $env:GITHUB_ENV
+          echo "VCPKG_ROOT=$env:VCPKG_ROOT" >> $env:GITHUB_ENV
+          echo "VCPKG_DEFAULT_TRIPLET=$env:VCPKG_DEFAULT_TRIPLET" >> $env:GITHUB_ENV
 
-      # Ready artifacts for upload
-      - name: Prepare Artifacts
+      # Ready CLI artifacts for upload
+      - name: Prepare CLI Artifacts
         run: |
           $MEDIATOASCII_VERSION = perl -ne 'print "$1" if /^version\s*=\s*"(.*?)"/' mediatoascii-cli/Cargo.toml
           Rename-Item -Path "target\release\mediatoascii-cli.exe" -NewName "mediatoascii.exe"
-          Compress-Archive -Path target/release/mediatoascii.exe -Destination ./mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip 
-          Compress-Archive -Path codecs/openh264-1.8.0-win64.dll -Update -Destination ./mediatoascii-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip 
+          Compress-Archive -Path target/release/mediatoascii.exe -Destination ./mediatoascii-cli-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip
+          Compress-Archive -Path codecs/openh264-1.8.0-win64.dll -Update -Destination ./mediatoascii-cli-x86_64-pc-windows-gnu-$MEDIATOASCII_VERSION.zip
 
-      # Upload artifact: https://github.com/actions/upload-artifact
-      - name: Upload Artifacts
+      # Upload CLI artifact
+      - name: Upload CLI Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mediatoascii-x86_64-pc-windows-gnu
-          path: mediatoascii-x86_64-pc-windows-gnu-*.zip
+          name: mediatoascii-cli-x86_64-pc-windows-gnu
+          path: mediatoascii-cli-x86_64-pc-windows-gnu-*.zip
           retention-days: 1
 
-      # Upload artifact: https://github.com/actions/upload-artifact
-      # - name: Upload Artifacts
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: opencv-error-log
-      #     path: D:\a\media-to-ascii\media-to-ascii\vcpkg\buildtrees\opencv4\install-x86-windows-rel-out.log
-      #     retention-days: 1
+      # Build Tauri App
+      - name: Install bun
+        shell: pwsh
+        run: powershell -c "irm bun.sh/install.ps1|iex"
 
+      - name: Install frontend dependencies
+        shell: pwsh
+        run: |
+          $env:PATH = "$env:USERPROFILE\.bun\bin;$env:PATH"
+          Set-Location mediatoascii-app
+          bun install
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: mediatoascii-app
+          args: --release
+
+      # Upload App artifacts
+      - name: Upload App Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mediatoascii-app-x86_64-pc-windows-gnu
+          path: |
+            mediatoascii-app/src-tauri/target/release/bundle/**/*.exe
+            mediatoascii-app/src-tauri/target/release/bundle/**/*.msi
+          retention-days: 1
