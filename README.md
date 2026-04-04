@@ -1,6 +1,6 @@
 # Media-To-Ascii
 
-CLI and utilities for converting media files (images/videos) to ascii outputs (output media file or print to console).  
+Desktop App, CLI and utilities for converting media files (images/videos) to ascii outputs (output media file or print to console).  
 Supports most standard image formats and video formats (encodes using x264/h.264/avc1).
 
 ## Examples
@@ -71,7 +71,7 @@ PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP55JY777777777777777777YJ55555555555555555555J
 
 # How To Use
 
-## Basic Usage
+## CLI Basic Usage
 
 ### Videos
 
@@ -148,7 +148,7 @@ If you see text overflowing to the right of the output frame(s), or cut off shor
 
 Below are different ways you can install **mediatoascii**
 
-## [Recommended] Portable Binaries
+## [Recommended] Portable Binaries/Executables
 
 > :warning: Note: you may need to disable your antivirus for the downloaded executable if it blocks it
 
@@ -156,16 +156,18 @@ Pre-compiled binaries are available to download and use immediately
 under [Releases](https://github.com/spoorn/media-to-ascii/releases). These don't require compiling/building dependencies
 so installation is much faster. Select the one for your system
 
-- `mediatoascii-x86_64-pc-windows-gnu` for Windows
-- `mediatoascii-x86_64-unknown-linux-gnu` for Linux-based systems (Ubuntu/WSL2/etc.)
-- `mediatoascii-x86_64-apple-darwin` for macOS
+- `mediatoascii-app-x86_64-pc-windows-gnu` for Windows Desktop App
+- `mediatoascii-app-x86_64-unknown-linux-gnu` for Linux-based systems (Ubuntu/WSL2/etc.) Desktop App
+- `mediatoascii-app-x86_64-apple-darwin` for macOS Desktop App
+- `mediatoascii-cli-x86_64-pc-windows-gnu` for Windows CLI
+- `mediatoascii-cli-x86_64-unknown-linux-gnu` for Linux-based systems (Ubuntu/WSL2/etc.) CLI
+- `mediatoascii-cli-x86_64-apple-darwin` for macOS CLI
 
-Extract the artifacts, then you can then run the binary like any shell/script file in a terminal
-e.g. `./path/to/mediatoascii <ARGS>`|`cd path/to/mediatoascii && ./mediatoascii <ARGS>, or you can add it to your system
-PATH so it can be run from any directory. You can easily find tutorials on the internet for "add a binary file to system
-PATH" for your OS system.
+Extract the artifacts, then you can then run Desktop App executable. For the CLI, run the binary like any shell/script 
+file in a terminal e.g. `./path/to/mediatoascii <ARGS>`|`cd path/to/mediatoascii && ./mediatoascii <ARGS>, or you can 
+add it to your system PATH so it can be run from any directory.
 
-## [Optional] Cargo
+## [Alternative] Cargo
 
 If you choose an installation method below that involves the `cargo` command, you'll want to install the rust toolchain
 which includes `cargo` if you don't already have it: https://doc.rust-lang.org/cargo/getting-started/installation.html
