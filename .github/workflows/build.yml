@@ -137,7 +137,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         with:
           projectPath: mediatoascii-app
-          args: --release
 
       # Upload App artifacts
       - name: Upload App Artifacts
@@ -276,7 +275,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         with:
           projectPath: mediatoascii-app
-          args: --release
 
       # Upload App artifacts
       - name: Upload App Artifacts
@@ -430,7 +428,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         with:
           projectPath: mediatoascii-app
-          args: --release
 
       # Upload App artifacts
       - name: Upload App Artifacts
