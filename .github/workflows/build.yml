@@ -50,14 +50,6 @@ jobs:
             --disable-debug \
             --disable-doc \
             --disable-programs \
-            --disable-ffplay \
-            --disable-ffprobe \
-            --disable-everything \
-            --enable-avcodec \
-            --enable-avformat \
-            --enable-avutil \
-            --enable-swscale \
-            --enable-swresample \
             --enable-gpl \
             --enable-libx264 \
             --extra-cflags="-I$HOME/ffmpeg-static/include" \
@@ -185,14 +177,6 @@ jobs:
             --disable-debug \
             --disable-doc \
             --disable-programs \
-            --disable-ffplay \
-            --disable-ffprobe \
-            --disable-everything \
-            --enable-avcodec \
-            --enable-avformat \
-            --enable-avutil \
-            --enable-swscale \
-            --enable-swresample \
             --enable-gpl \
             --enable-libx264 \
             --extra-cflags="-I$HOME/ffmpeg-static/include" \
@@ -328,7 +312,7 @@ jobs:
       # Uses dynamic CRT as Rust/ffmpeg-sys-next looks for that by default and this matches linux/macOS
       - name: Install ffmpeg (static)
         run: |
-          ./vcpkg/vcpkg install ffmpeg[core,ffmpeg,avdevice,swscale,swresample,x264]:x64-windows-static-md
+          ./vcpkg/vcpkg install ffmpeg[all-gpl,dav1d]:x64-windows-static-md
           echo "Listing packages:"
           ./vcpkg/vcpkg list
           $env:VCPKG_ROOT="${{ github.workspace }}/vcpkg"
