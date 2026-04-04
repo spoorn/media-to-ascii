@@ -179,8 +179,8 @@ jobs:
             --disable-programs \
             --enable-gpl \
             --enable-libx264 \
-            --extra-cflags="-I$HOME/ffmpeg-static/include" \
-            --extra-ldflags="-L$HOME/ffmpeg-static/lib"
+            --extra-cflags="-mmacosx-version-min=11.0 -I$HOME/ffmpeg-static/include" \
+            --extra-ldflags="-mmacosx-version-min=11.0 -L$HOME/ffmpeg-static/lib"
           make -j$(sysctl -n hw.ncpu)
           make install
           echo "FFMPEG_DIR=$HOME/ffmpeg-static" >> $GITHUB_ENV
