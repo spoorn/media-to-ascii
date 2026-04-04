@@ -123,13 +123,13 @@ jobs:
           retention-days: 1
 
       # Build Tauri App
-      - name: Install bun
-        run: curl -fsSL https://bun.sh/install | bash
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install frontend dependencies
         run: |
-          export BUN_INSTALL="$HOME/.bun"
-          export PATH="$BUN_INSTALL/bin:$PATH"
           cd mediatoascii-app
           bun install
 
@@ -262,13 +262,13 @@ jobs:
           retention-days: 1
 
       # Build Tauri App
-      - name: Install bun
-        run: curl -fsSL https://bun.sh/install | bash
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install frontend dependencies
         run: |
-          export BUN_INSTALL="$HOME/.bun"
-          export PATH="$BUN_INSTALL/bin:$PATH"
           cd mediatoascii-app
           bun install
 
@@ -416,15 +416,14 @@ jobs:
           retention-days: 1
 
       # Build Tauri App
-      - name: Install bun
-        shell: pwsh
-        run: powershell -c "irm bun.sh/install.ps1|iex"
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install frontend dependencies
-        shell: pwsh
         run: |
-          $env:PATH = "$env:USERPROFILE\.bun\bin;$env:PATH"
-          Set-Location mediatoascii-app
+          cd mediatoascii-app
           bun install
 
       - name: Build Tauri App
