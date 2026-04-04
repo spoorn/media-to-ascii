@@ -144,8 +144,8 @@ jobs:
         with:
           name: mediatoascii-app-x86_64-unknown-linux-gnu
           path: |
-            mediatoascii-app/src-tauri/target/release/bundle/**/*.AppImage
-            mediatoascii-app/src-tauri/target/release/bundle/**/*.deb
+            target/release/bundle/**/*.AppImage
+            target/release/bundle/**/*.deb
           retention-days: 1
 
   macos-build:
@@ -282,8 +282,8 @@ jobs:
         with:
           name: mediatoascii-app-x86_64-apple-darwin
           path: |
-            mediatoascii-app/src-tauri/target/release/bundle/**/*.dmg
-            mediatoascii-app/src-tauri/target/release/bundle/**/*.app
+            target/release/bundle/**/*.dmg
+            target/release/bundle/**/*.app
           retention-days: 1
 
   windows-build:
@@ -435,6 +435,6 @@ jobs:
         with:
           name: mediatoascii-app-x86_64-pc-windows-gnu
           path: |
-            mediatoascii-app/src-tauri/target/release/bundle/**/*.exe
-            mediatoascii-app/src-tauri/target/release/bundle/**/*.msi
+            target/release/bundle/**/*.exe
+            target/release/bundle/**/*.msi
           retention-days: 1
