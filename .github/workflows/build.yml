@@ -50,6 +50,9 @@ jobs:
             --disable-debug \
             --disable-doc \
             --disable-programs \
+            --disable-bzlib \
+            --disable-xlib \
+            --disable-xcb \
             --enable-gpl \
             --enable-libx264 \
             --extra-cflags="-I$HOME/ffmpeg-static/include" \
@@ -177,6 +180,9 @@ jobs:
             --disable-debug \
             --disable-doc \
             --disable-programs \
+            --disable-bzlib \
+            --disable-xlib \
+            --disable-xcb \
             --enable-gpl \
             --enable-libx264 \
             --extra-cflags="-mmacosx-version-min=11.0 -I$HOME/ffmpeg-static/include" \
