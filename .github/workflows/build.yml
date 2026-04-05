@@ -56,8 +56,7 @@ jobs:
             --enable-gpl \
             --enable-libx264 \
             --extra-cflags="-I$HOME/ffmpeg-static/include" \
-            --extra-ldflags="-L$HOME/ffmpeg-static/lib" \
-            --extra-libs="-lx264"
+            --extra-ldflags="-L$HOME/ffmpeg-static/lib"
           make -j$(nproc)
           make install
           echo "FFMPEG_DIR=$HOME/ffmpeg-static" >> $GITHUB_ENV
@@ -189,8 +188,7 @@ jobs:
             --enable-gpl \
             --enable-libx264 \
             --extra-cflags="-I$HOME/ffmpeg-static/include" \
-            --extra-ldflags="-L$HOME/ffmpeg-static/lib" \
-            --extra-libs="-lx264"
+            --extra-ldflags="-L$HOME/ffmpeg-static/lib"
           make -j$(sysctl -n hw.ncpu)
           make install
           echo "FFMPEG_DIR=$HOME/ffmpeg-static" >> $GITHUB_ENV
