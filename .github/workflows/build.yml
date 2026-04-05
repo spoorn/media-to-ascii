@@ -49,6 +49,7 @@ jobs:
 
       - name: Install ffmpeg (static)
         run: |
+          export PKG_CONFIG_PATH="$HOME/ffmpeg-static/lib/pkgconfig:$PKG_CONFIG_PATH"
           wget https://ffmpeg.org/releases/ffmpeg-8.1.tar.xz
           tar xf ffmpeg-8.1.tar.xz
           cd ffmpeg-8.1
@@ -170,7 +171,7 @@ jobs:
         run: brew install bash
 
       - name: Install ffmpeg dependencies
-        run: brew install yasm nasm
+        run: brew install yasm nasm pkg-config
 
       - name: Build x264 (static)
         run: |
@@ -188,6 +189,7 @@ jobs:
 
       - name: Install ffmpeg (static)
         run: |
+          export PKG_CONFIG_PATH="$HOME/ffmpeg-static/lib/pkgconfig:$PKG_CONFIG_PATH"
           wget https://ffmpeg.org/releases/ffmpeg-8.1.tar.xz
           tar xf ffmpeg-8.1.tar.xz
           cd ffmpeg-8.1
