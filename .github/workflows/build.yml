@@ -56,7 +56,8 @@ jobs:
             --enable-gpl \
             --enable-libx264 \
             --extra-cflags="-I$HOME/ffmpeg-static/include" \
-            --extra-ldflags="-L$HOME/ffmpeg-static/lib"
+            --extra-ldflags="-L$HOME/ffmpeg-static/lib" \
+            --extra-libs="-lx264"
           make -j$(nproc)
           make install
           echo "FFMPEG_DIR=$HOME/ffmpeg-static" >> $GITHUB_ENV
@@ -186,7 +187,8 @@ jobs:
             --enable-gpl \
             --enable-libx264 \
             --extra-cflags="-I$HOME/ffmpeg-static/include" \
-            --extra-ldflags="-L$HOME/ffmpeg-static/lib"
+            --extra-ldflags="-L$HOME/ffmpeg-static/lib" \
+            --extra-libs="-lx264"
           make -j$(sysctl -n hw.ncpu)
           make install
           echo "FFMPEG_DIR=$HOME/ffmpeg-static" >> $GITHUB_ENV
@@ -320,7 +322,7 @@ jobs:
       # Uses dynamic CRT as Rust/ffmpeg-sys-next looks for that by default and this matches linux/macOS
       - name: Install ffmpeg (static)
         run: |
-          ./vcpkg/vcpkg install ffmpeg[all-gpl,dav1d]:x64-windows-static-md
+          ./vcpkg/vcpkg install ffmpeg[ffmpeg,avcodec,avformat,avdevice,avfilter,swscale,swresample,aom,dav1d,bzip2,freetype,iconv,lzma,mp3lame,openjpeg,openmpt,opus,snappy,soxr,speex,theora,vorbis,vpx,webp,xml2,zlib,gpl,x264,x265]:x64-windows-static-md
           echo "Listing packages:"
           ./vcpkg/vcpkg list
           $env:VCPKG_ROOT="${{ github.workspace }}/vcpkg"
