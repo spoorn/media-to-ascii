@@ -51,6 +51,7 @@ jobs:
             --disable-doc \
             --disable-programs \
             --disable-bzlib \
+            --disable-lzma \
             --disable-indev=xcbgrab \
             --enable-gpl \
             --enable-libx264 \
@@ -180,6 +181,7 @@ jobs:
             --disable-doc \
             --disable-programs \
             --disable-bzlib \
+            --disable-lzma \
             --disable-indev=xcbgrab \
             --enable-gpl \
             --enable-libx264 \

@@ -172,6 +172,41 @@ add it to your system PATH so it can be run from any directory.
 If you choose an installation method below that involves the `cargo` command, you'll want to install the rust toolchain
 which includes `cargo` if you don't already have it: https://doc.rust-lang.org/cargo/getting-started/installation.html
 
+## Prerequisite: ffmpeg
+mediatoascii can use ffmpeg instead of opencv for video coding. This is the recommended default option for video encoding.
+
+ffmpeg-next has some details on installing ffmpeg on different platforms: https://github.com/zmwangx/rust-ffmpeg/wiki/Notes-on-building
+
+### Windows
+Install the full build shared version from https://ffmpeg.org/download.html. For example:
+
+```shell
+winget install "FFmpeg (Shared)"
+```
+
+Then set the `FFMPEG_DIR` environment variable to the path of the ffmpeg installation containing `include` and `lib`.
+If you installed with winget, this defaults to the Local AppData folder, e.g.
+`C:\Users\MyUser\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg.Shared_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1-full_build-shared`
+
+You'll also need LLVM. You can install this via chocolatey: https://community.chocolatey.org/packages/llvm
+
+Then add LLVM's `bin` to `PATH` OR set the `LIBCLANG_PATH` environment variable to the `lib` folder of the LLVM
+installation, e.g. `C:\Program Files\LLVM\lib` if installed via chocolatey
+
+### Linux
+
+Debian based systems:
+
+```shell
+apt install -y clang libavcodec-dev libavformat-dev libavutil-dev pkg-config
+```
+
+### macOS
+
+```shell
+brew install pkg-config ffmpeg
+```
+
 ## Prerequisite: OpenCV
 
 OpenCV 4.x is required on the system if you are not using the pre-compiled binaries installation, which has OpenCV
@@ -263,27 +298,6 @@ Install OpenCV:
 ```
 pacman -S clang qt6-base opencv
 ```
-
-## Prerequisite: ffmpeg
-Alternatively, mediatoascii can use ffmpeg instead of opencv for video coding.
-
-ffmpeg-next has some details on installing ffmpeg on different platforms: https://github.com/zmwangx/rust-ffmpeg/wiki/Notes-on-building
-
-### Windows
-Install the full build shared version from https://ffmpeg.org/download.html. For example:
-
-```shell
-winget install "FFmpeg (Shared)"
-```
-
-Then set the `FFMPEG_DIR` environment variable to the path of the ffmpeg installation containing `include` and `lib`.
-If you installed with winget, this defaults to the Local AppData folder, e.g. 
-`C:\Users\MyUser\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg.Shared_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1-full_build-shared`
-
-You'll also need LLVM. You can install this via chocolatey: https://community.chocolatey.org/packages/llvm
-
-Then add LLVM's `bin` to `PATH` OR set the `LIBCLANG_PATH` environment variable to the `lib` folder of the LLVM 
-installation, e.g. `C:\Program Files\LLVM\lib` if installed via chocolatey
 
 ## [Cargo binstall](https://github.com/cargo-bins/cargo-binstall) Binaries
 
