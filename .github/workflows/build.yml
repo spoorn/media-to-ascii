@@ -36,7 +36,16 @@ jobs:
         run: sudo apt update && sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
       - name: Install ffmpeg dependencies
-        run: sudo apt install git yasm nasm libx264-dev xz-utils
+        run: sudo apt install git yasm nasm xz-utils
+
+      - name: Build x264 (static)
+        run: |
+          git clone https://code.videolan.org/videolan/x264.git
+          pushd x264
+          ./configure --prefix="$HOME/ffmpeg-static" --enable-static --disable-cli --disable-opencl
+          make -j$(nproc)
+          make install
+          popd
 
       - name: Install ffmpeg (static)
         run: |
@@ -91,7 +100,6 @@ jobs:
           export OPENCV_LINK_LIBS="opencv_videoio,opencv_imgcodecs,opencv_imgproc,opencv_core,libippiw,libittnotify,libippicv,z"
           export OPENCV_LINK_PATHS=/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu
           export OPENCV_INCLUDE_PATHS=/opt/opencv/include,/opt/opencv/include/opencv4
-          export RUSTFLAGS="-C link-arg=-lx264"
           sudo ln -s /usr/lib/llvm-16/lib/libclang.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
           ls -R /opt/opencv
           ls -R /usr/lib
@@ -100,7 +108,6 @@ jobs:
           echo "OPENCV_LINK_LIBS=$OPENCV_LINK_LIBS" >> $GITHUB_ENV
           echo "OPENCV_LINK_PATHS=$OPENCV_LINK_PATHS" >> $GITHUB_ENV
           echo "OPENCV_INCLUDE_PATHS=$OPENCV_INCLUDE_PATHS" >> $GITHUB_ENV
-          echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
 
       # Ready CLI artifacts for upload
       - name: Prepare CLI Artifacts
@@ -163,7 +170,16 @@ jobs:
         run: brew install bash
 
       - name: Install ffmpeg dependencies
-        run: brew install yasm nasm x264
+        run: brew install yasm nasm
+
+      - name: Build x264 (static)
+        run: |
+          git clone https://code.videolan.org/videolan/x264.git
+          cd x264
+          ./configure --prefix="$HOME/ffmpeg-static" --enable-static --disable-cli --disable-opencl
+          make -j$(sysctl -n hw.ncpu)
+          make install
+          cd ..
 
       # dynamic link libclang correctly, according to https://github.com/twistedfall/opencv-rust
       - name: Dynamic Link libclang
@@ -225,7 +241,6 @@ jobs:
         run: |
           clang_dir="$(clang --print-search-dirs | awk -F= '/^libraries: =/ { print $2 }')"
           export MACOSX_DEPLOYMENT_TARGET=15.5
-          export RUSTFLAGS="-C link-arg=-lx264"
           export OPENCV_LINK_LIBS=opencv_core,opencv_videoio,opencv_imgcodecs,opencv_imgproc,libtegra_hal,libittnotify,zlib,OpenCL.framework,Cocoa.framework,Accelerate.framework,AVFoundation.framework,CoreGraphics.framework,CoreMedia.framework,CoreVideo.framework,QuartzCore.framework,clang_rt.osx
           export OPENCV_LINK_PATHS=/usr/local/lib,/usr/local/lib/opencv4/3rdparty,$clang_dir/lib/darwin
           export OPENCV_INCLUDE_PATHS=/usr/local/include,/usr/local/include/opencv4
@@ -234,7 +249,6 @@ jobs:
           cargo build --release
           # Persist OpenCV env vars for Tauri app build step
           echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
-          echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
           echo "OPENCV_LINK_LIBS=$OPENCV_LINK_LIBS" >> $GITHUB_ENV
           echo "OPENCV_LINK_PATHS=$OPENCV_LINK_PATHS" >> $GITHUB_ENV
           echo "OPENCV_INCLUDE_PATHS=$OPENCV_INCLUDE_PATHS" >> $GITHUB_ENV
