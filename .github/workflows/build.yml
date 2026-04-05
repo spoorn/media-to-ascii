@@ -70,6 +70,7 @@ jobs:
           make -j$(nproc)
           make install
           echo "FFMPEG_DIR=$HOME/ffmpeg-static" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$HOME/ffmpeg-static/lib/pkgconfig" >> $GITHUB_ENV
 
       # Install opencv
       #- name: Install opencv
@@ -210,6 +211,7 @@ jobs:
           make -j$(sysctl -n hw.ncpu)
           make install
           echo "FFMPEG_DIR=$HOME/ffmpeg-static" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$HOME/ffmpeg-static/lib/pkgconfig" >> $GITHUB_ENV
 
       # Install opencv
       #- name: Install opencv
