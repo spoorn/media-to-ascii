@@ -102,6 +102,7 @@ jobs:
           export OPENCV_LINK_LIBS="opencv_videoio,opencv_imgcodecs,opencv_imgproc,opencv_core,libippiw,libittnotify,libippicv,z"
           export OPENCV_LINK_PATHS=/opt/opencv/lib,/opt/opencv/lib/opencv4/3rdparty,/usr/lib/x86_64-linux-gnu
           export OPENCV_INCLUDE_PATHS=/opt/opencv/include,/opt/opencv/include/opencv4
+          export RUSTFLAGS="-C link-arg=$HOME/ffmpeg-static/lib/libx264.a"
           sudo ln -s /usr/lib/llvm-16/lib/libclang.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
           ls -R /opt/opencv
           ls -R /usr/lib
@@ -110,6 +111,7 @@ jobs:
           echo "OPENCV_LINK_LIBS=$OPENCV_LINK_LIBS" >> $GITHUB_ENV
           echo "OPENCV_LINK_PATHS=$OPENCV_LINK_PATHS" >> $GITHUB_ENV
           echo "OPENCV_INCLUDE_PATHS=$OPENCV_INCLUDE_PATHS" >> $GITHUB_ENV
+          echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
 
       # Ready CLI artifacts for upload
       - name: Prepare CLI Artifacts
@@ -245,6 +247,7 @@ jobs:
         run: |
           clang_dir="$(clang --print-search-dirs | awk -F= '/^libraries: =/ { print $2 }')"
           export MACOSX_DEPLOYMENT_TARGET=15.5
+          export RUSTFLAGS="-C link-arg=$HOME/ffmpeg-static/lib/libx264.a -C link-arg=-framework -C link-arg=CoreAudio -C link-arg=-framework -C link-arg=Metal"
           export OPENCV_LINK_LIBS=opencv_core,opencv_videoio,opencv_imgcodecs,opencv_imgproc,libtegra_hal,libittnotify,zlib,OpenCL.framework,Cocoa.framework,Accelerate.framework,AVFoundation.framework,CoreGraphics.framework,CoreMedia.framework,CoreVideo.framework,QuartzCore.framework,clang_rt.osx
           export OPENCV_LINK_PATHS=/usr/local/lib,/usr/local/lib/opencv4/3rdparty,$clang_dir/lib/darwin
           export OPENCV_INCLUDE_PATHS=/usr/local/include,/usr/local/include/opencv4
@@ -253,6 +256,7 @@ jobs:
           cargo build --release
           # Persist OpenCV env vars for Tauri app build step
           echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
+          echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
           echo "OPENCV_LINK_LIBS=$OPENCV_LINK_LIBS" >> $GITHUB_ENV
           echo "OPENCV_LINK_PATHS=$OPENCV_LINK_PATHS" >> $GITHUB_ENV
           echo "OPENCV_INCLUDE_PATHS=$OPENCV_INCLUDE_PATHS" >> $GITHUB_ENV
